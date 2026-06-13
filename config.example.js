@@ -1,5 +1,4 @@
 // Copy this file to config.js and fill in your own Google Sheet's published CSV URL.
-// config.js is gitignored so your data source URL isn't committed to the repo.
 //
 // How to get this URL:
 // 1. Open your Google Sheet

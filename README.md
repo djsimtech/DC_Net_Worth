@@ -65,7 +65,11 @@ window.NET_WORTH_CONFIG = {
 };
 ```
 
-`config.js` is gitignored so your sheet URL doesn't end up in the public repo.
+`config.js` is committed to the repo. It only contains the unlisted published
+CSV URL (a pointer, not your actual numbers), which keeps deployment simple.
+If you'd rather keep that URL out of the repo entirely, add `config.js` to
+`.gitignore` and inject it at deploy time via a GitHub Actions workflow
+instead.
 
 ## 4. Run locally
 
@@ -77,17 +81,6 @@ server (e.g. `npx serve .`).
 1. Push this repo to GitHub (public repo is fine — your numbers live in the
    Google Sheet, not in the repo).
 2. In repo Settings > Pages, set the source to your default branch (root).
-3. **Important:** since `config.js` is gitignored, it won't be deployed. You
-   have two options:
-   - Add `config.js` to the repo anyway (it only contains the unlisted Sheet
-     URL, not your actual numbers) — remove it from `.gitignore` if you're
-     comfortable with that, or
-   - Use a GitHub Actions workflow to inject `config.js` from a repository
-     secret at build/deploy time.
-
-   For most people, option 1 is simplest: the published CSV URL is obscure
-   but not secret-sensitive on its own (it's just a pointer), so committing
-   `config.js` is a reasonable tradeoff for simplicity.
 
 ## Customizing projections
 
