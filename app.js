@@ -478,6 +478,136 @@ function renderProjectionChart(entries, goalAmount) {
   }
 }
 
+// Projects a starting balance forward through retirement withdrawals (with
+// optional Social Security income kicking in after a delay) until it's
+// depleted or a max horizon is reached. Returns yearly balance snapshots.
+function computeRetirementDrawdown({ startingBalance, annualGrowthRate, annualWithdrawal, monthlySS, ssDelayYears, maxYears = 50 }) {
+  const monthlyRate = Math.pow(1 + annualGrowthRate / 100, 1 / 12) - 1;
+  const monthlyWithdrawal = annualWithdrawal / 12;
+  const ssStartMonth = ssDelayYears * 12;
+
+  let balance = startingBalance;
+  const yearlyBalances = [balance];
+  let depletedYear = null;
+
+  for (let m = 1; m <= maxYears * 12; m++) {
+    const ss = m > ssStartMonth ? monthlySS : 0;
+    balance = balance * (1 + monthlyRate) - monthlyWithdrawal + ss;
+    if (balance <= 0) {
+      balance = 0;
+      if (depletedYear === null) depletedYear = m / 12;
+    }
+    if (m % 12 === 0) yearlyBalances.push(balance);
+    if (depletedYear !== null && m % 12 === 0) break;
+  }
+
+  return { yearlyBalances, depletedYear };
+}
+
+let retirementChartInstance = null;
+
+function renderRetirementSection(entries) {
+  const annualGrowthRate = parseFloat(document.getElementById("growthRate").value) || 0;
+  const monthlyContribution = parseFloat(document.getElementById("monthlyContribution").value) || 0;
+  const yearsToRetirement = parseInt(document.getElementById("yearsToRetirement").value, 10) || 0;
+  const annualWithdrawal = parseFloat(document.getElementById("annualWithdrawal").value) || 0;
+  const monthlySS = parseFloat(document.getElementById("monthlySS").value) || 0;
+  const ssDelayYears = parseInt(document.getElementById("ssDelayYears").value, 10) || 0;
+  const retirementGrowthRate = parseFloat(document.getElementById("retirementGrowthRate").value) || 0;
+
+  // Accumulation phase: project current net worth forward to retirement.
+  const { projected, historical } = computeProjection(entries, annualGrowthRate, monthlyContribution, Math.max(yearsToRetirement, 1), null);
+  const balanceAtRetirement = yearsToRetirement > 0 ? projected[yearsToRetirement * 12 - 1] : historical[historical.length - 1];
+
+  const { yearlyBalances, depletedYear } = computeRetirementDrawdown({
+    startingBalance: balanceAtRetirement,
+    annualGrowthRate: retirementGrowthRate,
+    annualWithdrawal,
+    monthlySS,
+    ssDelayYears,
+  });
+
+  // Summary cards
+  const withdrawalRate = balanceAtRetirement > 0 ? (annualWithdrawal / balanceAtRetirement) * 100 : null;
+  const annualSS = monthlySS * 12;
+
+  const cards = [
+    {
+      label: "Balance at Retirement",
+      value: fmtCurrency(balanceAtRetirement),
+      sub: `in ${yearsToRetirement} year${yearsToRetirement !== 1 ? "s" : ""}`,
+      positive: true,
+    },
+    {
+      label: "Withdrawal Rate",
+      value: withdrawalRate !== null ? `${withdrawalRate.toFixed(1)}%` : "--",
+      sub: `${fmtCurrency(annualWithdrawal)}/yr from ${fmtCurrency(balanceAtRetirement)}`,
+      positive: withdrawalRate === null || withdrawalRate <= 4,
+    },
+    {
+      label: "Social Security Income",
+      value: fmtCurrency(annualSS) + "/yr",
+      sub: ssDelayYears > 0 ? `starting ${ssDelayYears} year${ssDelayYears !== 1 ? "s" : ""} into retirement` : "starting at retirement",
+      positive: true,
+    },
+  ];
+
+  if (depletedYear !== null) {
+    cards.push({
+      label: "Funds Last",
+      value: `~${depletedYear.toFixed(0)} years`,
+      sub: "into retirement before balance hits $0",
+      positive: false,
+    });
+  } else {
+    cards.push({
+      label: "Funds Last",
+      value: "50+ years",
+      sub: "balance does not appear to run out",
+      positive: true,
+    });
+  }
+
+  document.getElementById("retirement-summary").innerHTML = cards.map((c) => `
+    <div class="perf-card">
+      <div class="perf-label">${c.label}</div>
+      <div class="perf-value ${c.positive ? "positive" : "negative"}">${c.value}</div>
+      <div class="perf-sub">${c.sub}</div>
+    </div>
+  `).join("");
+
+  // Chart: balance through retirement, year by year
+  const labels = yearlyBalances.map((_, i) => `Year ${i}`);
+  const ctx = document.getElementById("retirementChart");
+  if (retirementChartInstance) retirementChartInstance.destroy();
+  retirementChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "Retirement Balance",
+        data: yearlyBalances,
+        borderColor: "#4ade80",
+        backgroundColor: "rgba(74, 222, 128, 0.15)",
+        fill: true,
+        tension: 0.25,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: "#e2e8f0" } } },
+      scales: {
+        x: { title: { display: true, text: "Years into retirement", color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "#334155" } },
+        y: {
+          ticks: { color: "#94a3b8", callback: (v) => fmtCurrency(v) },
+          grid: { color: "#334155" },
+        },
+      },
+    },
+  });
+}
+
 function showError(message) {
   document.getElementById("error-card").style.display = "block";
   document.getElementById("error-message").textContent = message;
@@ -503,8 +633,12 @@ function init() {
       const update = () => {
         const goal = parseFloat(document.getElementById("goalAmount").value) || null;
         renderProjectionChart(entries, goal);
+        renderRetirementSection(entries);
       };
-      ["growthRate", "monthlyContribution", "projectionYears", "goalAmount"].forEach((id) => {
+      [
+        "growthRate", "monthlyContribution", "projectionYears", "goalAmount",
+        "yearsToRetirement", "annualWithdrawal", "monthlySS", "ssDelayYears", "retirementGrowthRate",
+      ].forEach((id) => {
         document.getElementById(id).addEventListener("input", update);
       });
       update();
