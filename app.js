@@ -182,6 +182,111 @@ function renderNetWorthChart(entries) {
   });
 }
 
+function pctChange(from, to) {
+  if (!from) return null;
+  return ((to - from) / Math.abs(from)) * 100;
+}
+
+function monthsBetween(d1, d2) {
+  return (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+}
+
+// Returns the most recent entry that is at least `days` before `latest`, or null.
+function findEntryAtLeastDaysBefore(entries, latest, days) {
+  const threshold = new Date(latest.date);
+  threshold.setDate(threshold.getDate() - days);
+  let result = null;
+  for (const e of entries) {
+    if (e.date <= threshold) result = e;
+  }
+  return result;
+}
+
+// Returns the last entry dated before Jan 1 of `latest`'s year, or null.
+function findYearStartEntry(entries, latest) {
+  const jan1 = new Date(latest.date.getFullYear(), 0, 1);
+  let result = null;
+  for (const e of entries) {
+    if (e.date < jan1) result = e;
+  }
+  return result;
+}
+
+function buildChangeCard(label, fromEntry, toEntry) {
+  if (!fromEntry || fromEntry === toEntry) return null;
+  const change = toEntry.netWorth - fromEntry.netWorth;
+  const pct = pctChange(fromEntry.netWorth, toEntry.netWorth);
+  return {
+    label,
+    value: fmtCurrencySigned(change),
+    sub: (pct !== null ? `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}% ` : "") + `since ${fromEntry.dateLabel}`,
+    positive: change >= 0,
+  };
+}
+
+function findBestWorstPeriod(entries) {
+  if (entries.length < 2) return { best: null, worst: null };
+  let best = null;
+  let worst = null;
+  for (let i = 1; i < entries.length; i++) {
+    const delta = entries[i].netWorth - entries[i - 1].netWorth;
+    const period = { delta, from: entries[i - 1], to: entries[i] };
+    if (!best || delta > best.delta) best = period;
+    if (!worst || delta < worst.delta) worst = period;
+  }
+  return { best, worst };
+}
+
+function renderPerformanceCards(entries) {
+  const container = document.getElementById("performance-cards");
+  const latest = entries[entries.length - 1];
+  const first = entries[0];
+  const cards = [];
+
+  cards.push(buildChangeCard("Last 1 Month", findEntryAtLeastDaysBefore(entries, latest, 20), latest));
+  cards.push(buildChangeCard("Last 3 Months", findEntryAtLeastDaysBefore(entries, latest, 75), latest));
+  cards.push(buildChangeCard("Year to Date", findYearStartEntry(entries, latest) || (first.date.getFullYear() === latest.date.getFullYear() ? first : null), latest));
+  cards.push(buildChangeCard("Last 12 Months", findEntryAtLeastDaysBefore(entries, latest, 330), latest));
+  cards.push(buildChangeCard("All Time", first, latest));
+
+  const totalMonths = monthsBetween(first.date, latest.date);
+  if (totalMonths >= 1) {
+    const avgMonthly = (latest.netWorth - first.netWorth) / totalMonths;
+    cards.push({
+      label: "Avg. Monthly Change",
+      value: fmtCurrencySigned(avgMonthly),
+      sub: `over ${totalMonths} month${totalMonths !== 1 ? "s" : ""}`,
+      positive: avgMonthly >= 0,
+    });
+  }
+
+  const { best, worst } = findBestWorstPeriod(entries);
+  if (best) {
+    cards.push({
+      label: "Best Period",
+      value: fmtCurrencySigned(best.delta),
+      sub: `${best.from.dateLabel} → ${best.to.dateLabel}`,
+      positive: best.delta >= 0,
+    });
+  }
+  if (worst) {
+    cards.push({
+      label: "Worst Period",
+      value: fmtCurrencySigned(worst.delta),
+      sub: `${worst.from.dateLabel} → ${worst.to.dateLabel}`,
+      positive: worst.delta >= 0,
+    });
+  }
+
+  container.innerHTML = cards.filter(Boolean).map((c) => `
+    <div class="perf-card">
+      <div class="perf-label">${c.label}</div>
+      <div class="perf-value ${c.positive ? "positive" : "negative"}">${c.value}</div>
+      <div class="perf-sub">${c.sub}</div>
+    </div>
+  `).join("");
+}
+
 function renderBreakdownChart(entries, assetCols, debtCols) {
   const ctx = document.getElementById("breakdownChart");
   const datasets = [];
@@ -391,6 +496,7 @@ function init() {
 
       renderSummary(entries);
       renderNetWorthChart(entries);
+      renderPerformanceCards(entries);
       renderBreakdownChart(entries, assetCols, debtCols);
       renderLatestPieChart(entries, assetCols);
 
