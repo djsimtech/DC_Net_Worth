@@ -45,6 +45,31 @@ Rules:
   history, pull old totals from past statements/snapshots if you have them —
   otherwise just start with today and build history going forward.
 
+### Backfilling history when you only have totals
+
+If you have a list of past net worth / total assets / total liabilities by
+month, but not the full per-account breakdown for those months, add two
+catch-all columns:
+
+```
+Asset: Other (Historical)
+Debt: Other (Historical)
+```
+
+For each historical row, put that month's **total assets** in
+`Asset: Other (Historical)` and **total liabilities** in
+`Debt: Other (Historical)`, leaving all the detailed account columns at `0`.
+For your current and future rows (where you do have the detailed breakdown),
+leave both "Historical" columns at `0` and fill in the detailed columns as
+usual.
+
+This keeps the net worth/assets/debts totals accurate for every row. The
+category breakdown chart will just show a single "Other (Historical)" block
+for past months, and full account-level detail from the point you started
+tracking individual accounts onward. See [sample-data.csv](sample-data.csv)
+for an example mixing historical totals (2024–2026) with a fully detailed
+current row.
+
 ## 2. Publish the sheet as CSV
 
 1. In Google Sheets: **File > Share > Publish to web**

@@ -1,2 +1,5 @@
-Date,Asset: Wells Fargo Pers Checking,Asset: Wells Fargo Bus Checking,Asset: Ally (All Accts),Asset: Cash on Hand,Asset: Silver,Asset: Cavco Stocks,Asset: Danny 401k,Asset: Danny Roth IRA,Asset: Danny IRA,Asset: Carla 401k,Asset: Carla Roth IRA,Asset: Evergreen (Property),Asset: Panorama (Property),Asset: Sequoia (Vehicle),Asset: RDX (Vehicle),Asset: Ford F250,Asset: Mustang,Debt: Danny Credit Card,Debt: Carla Credit Card,Debt: Sequoia Loan,Debt: RDX Loan,Debt: Panorama Mortgage
-6/1/2026,605,3750,12362,1200,600,21369.04,363049.23,98250.46,39625.57,38696.07,64087.33,508000,178700,80000,40000,2000,2000,180,641,87565.56,6608.75,89500
+Date,Asset: Wells Fargo Pers Checking,Asset: Wells Fargo Bus Checking,Asset: Ally (All Accts),Asset: Cash on Hand,Asset: Silver,Asset: Cavco Stocks,Asset: Danny 401k,Asset: Danny Roth IRA,Asset: Danny IRA,Asset: Carla 401k,Asset: Carla Roth IRA,Asset: Evergreen (Property),Asset: Panorama (Property),Asset: Sequoia (Vehicle),Asset: RDX (Vehicle),Asset: Ford F250,Asset: Mustang,Asset: Other (Historical),Debt: Danny Credit Card,Debt: Carla Credit Card,Debt: Sequoia Loan,Debt: RDX Loan,Debt: Panorama Mortgage,Debt: Other (Historical)
+5/1/2024,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1200000,0,0,0,0,0,220000
+1/1/2025,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1300000,0,0,0,0,0,205000
+1/1/2026,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1400000,0,0,0,0,0,195000
+6/1/2026,605,3750,12362,1200,600,21369.04,363049.23,98250.46,39625.57,38696.07,64087.33,508000,178700,80000,40000,2000,2000,0,180,641,87565.56,6608.75,89500,0
