@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our Net Worth</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="page-header">
+    <h1>Our Net Worth</h1>
+    <div id="summary" class="summary">
+      <div class="summary-card">
+        <div class="summary-label">Current Net Worth</div>
+        <div class="summary-value" id="current-net-worth">--</div>
+        <div class="summary-sub" id="as-of-date"></div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Total Assets</div>
+        <div class="summary-value" id="current-assets">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Total Debts</div>
+        <div class="summary-value" id="current-debts">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Change (last entry)</div>
+        <div class="summary-value" id="last-change">--</div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Net Worth Over Time</h2>
+      <div class="chart-container">
+        <canvas id="netWorthChart"></canvas>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Assets vs Debts Breakdown</h2>
+      <div class="breakdown-layout">
+        <div class="chart-container">
+          <canvas id="breakdownChart"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="latestPieChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Projections</h2>
+      <div class="projection-controls">
+        <label>
+          Assumed annual growth rate (%)
+          <input type="number" id="growthRate" value="6" step="0.1">
+        </label>
+        <label>
+          Monthly contribution ($)
+          <input type="number" id="monthlyContribution" value="500" step="50">
+        </label>
+        <label>
+          Project forward (years)
+          <input type="number" id="projectionYears" value="20" step="1" min="1" max="50">
+        </label>
+        <label>
+          Goal net worth ($, optional)
+          <input type="number" id="goalAmount" placeholder="e.g. 1000000" step="10000">
+        </label>
+      </div>
+      <div id="goal-result" class="goal-result"></div>
+      <div class="chart-container">
+        <canvas id="projectionChart"></canvas>
+      </div>
+    </section>
+
+    <section class="card" id="error-card" style="display:none;">
+      <h2>Setup Needed</h2>
+      <p id="error-message"></p>
+      <p>See <code>README.md</code> for setup instructions.</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>Data last loaded: <span id="load-time"></span></p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
