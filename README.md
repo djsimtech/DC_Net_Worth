@@ -15,20 +15,35 @@ No backend, no database, no accounts.
 
 ## 1. Set up your Google Sheet
 
-Create a sheet with a header row like this:
+This site needs a **time-series** layout: one row per date, with one column
+per account. That's different from a typical categorized balance sheet
+(where each account is its own row and there's a single snapshot of values).
 
-| Date | Asset: Checking | Asset: Savings | Asset: Investments | Asset: Retirement | Asset: Home Value | Debt: Mortgage | Debt: Student Loans | Debt: Credit Cards |
-|------|------------------|-----------------|----------------------|----------------------|----------------------|------------------|------------------------|----------------------|
-| 1/1/2026 | 7500 | 20000 | 98000 | 113000 | 376000 | 270000 | 4000 | 500 |
+If you already keep a detailed categorized sheet (assets/liabilities/equity
+broken out by account), keep that as-is for your own bookkeeping, and add a
+**separate tab** — e.g. "History" — laid out like this:
+
+| Date | Asset: Wells Fargo Pers Checking | Asset: Ally (All Accts) | ... | Asset: Danny 401k | ... | Debt: Danny Credit Card | Debt: Panorama Mortgage | ... |
+|------|-----------------------------------|---------------------------|-----|----------------------|-----|---------------------------|---------------------------|-----|
+| 6/1/2026 | 605 | 12362 | ... | 363049.23 | ... | 180 | 89500 | ... |
+
+See [sample-data.csv](sample-data.csv) for a full example using a typical
+set of accounts (checking/savings, retirement accounts, properties,
+vehicles, credit cards, mortgage, auto loans).
 
 Rules:
 - The **Date** column is required and must be named exactly `Date`.
 - Any column starting with `Asset` (e.g. `Asset: Checking`) is treated as an asset.
 - Any column starting with `Debt` or `Liabilit...` (e.g. `Debt: Mortgage`) is
   treated as a debt.
+- If the same account name applies to both a value and a loan/debt (e.g. a
+  car worth $40k with a $6.6k loan against it), give each column a distinct
+  label, like `Asset: RDX (Vehicle)` and `Debt: RDX Loan`.
 - You can add, rename, or remove asset/debt columns freely — the site adapts
   automatically.
-- Add one row per time you update your numbers (e.g. monthly).
+- Add one row per time you update your numbers (e.g. monthly). To backfill
+  history, pull old totals from past statements/snapshots if you have them —
+  otherwise just start with today and build history going forward.
 
 ## 2. Publish the sheet as CSV
 
