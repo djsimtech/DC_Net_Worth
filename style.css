@@ -382,10 +382,13 @@ footer {
   body.snapshot .summary-value { font-size: 0.95rem; }
   body.snapshot .summary-sub { font-size: 0.68rem; }
 
-  /* Chart heights are set by JS before print — no overflow hacks needed */
+  /* Force chart to print height — !important overrides Chart.js inline style on canvas */
+  body.snapshot #networth-section .chart-container { height: 150px !important; overflow: hidden; }
+  body.snapshot #networth-section .chart-container canvas { height: 150px !important; }
 
-  /* Reduce gap between sections */
-  body.snapshot main { gap: 8px; }
+  /* Block layout is more reliable for print pagination than flex */
+  body.snapshot main { display: block !important; }
+  body.snapshot main > * { margin-bottom: 8px; }
 
   /* Performance cards: show first row only (4 cards) */
   body.snapshot #networth-section .performance-grid {

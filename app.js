@@ -859,27 +859,19 @@ function init() {
   document.getElementById("print-btn").addEventListener("click", () => window.print());
 
   document.getElementById("snapshot-btn").addEventListener("click", () => {
-    const CHART_H = 180;
-    const nwContainer = document.querySelector("#networth-section .chart-container");
-    const nwOrigH = nwContainer.style.height;
-
     document.body.classList.add("snapshot");
-    void document.body.offsetHeight;
 
-    nwContainer.style.height = CHART_H + "px";
-    if (netWorthChartInstance) netWorthChartInstance.resize(nwContainer.clientWidth, CHART_H);
-
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      window.print();
-      window.addEventListener("afterprint", () => {
+    // matchMedia fires reliably on Chrome/Windows; afterprint does not
+    const mql = window.matchMedia("print");
+    const onPrintChange = (e) => {
+      if (!e.matches) {
+        mql.removeEventListener("change", onPrintChange);
         document.body.classList.remove("snapshot");
-        nwContainer.style.height = nwOrigH;
-        // Delay resize until browser has repainted with restored CSS heights
-        setTimeout(() => {
-          if (netWorthChartInstance) netWorthChartInstance.resize();
-        }, 100);
-      }, { once: true });
-    }));
+      }
+    };
+    mql.addEventListener("change", onPrintChange);
+
+    requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
   });
 
   loadData(config.csvUrl)
