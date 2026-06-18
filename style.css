@@ -367,7 +367,7 @@ footer {
   body.snapshot #retirement-tax-note,
   body.snapshot #retirementChart,
   body.snapshot .projection-controls,
-  body.snapshot #breakdown-bar-container { display: none !important; }
+  body.snapshot #breakdown-section { display: none !important; }
 
   /* Compact cards — allow page breaks between sections so retirement isn't
      bumped to page 2 just because it can't fit in leftover space */
