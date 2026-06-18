@@ -8,7 +8,11 @@
 </head>
 <body>
   <header class="page-header">
-    <h1>Our Net Worth</h1>
+    <div class="header-row">
+      <h1>Our Net Worth</h1>
+      <button id="print-btn" class="print-btn">⬇ Export PDF</button>
+    </div>
+    <div id="freshness-banner" class="freshness-banner" style="display:none;"></div>
     <div id="summary" class="summary">
       <div class="summary-card">
         <div class="summary-label">Current Net Worth</div>
@@ -40,6 +44,13 @@
     </section>
 
     <section class="card">
+      <h2>Month-over-Month Change</h2>
+      <div class="chart-container">
+        <canvas id="momChart"></canvas>
+      </div>
+    </section>
+
+    <section class="card">
       <h2>Assets vs Debts Breakdown</h2>
       <div class="breakdown-layout">
         <div class="chart-container">
@@ -49,6 +60,12 @@
           <canvas id="latestPieChart"></canvas>
         </div>
       </div>
+    </section>
+
+    <section class="card">
+      <h2>Debt Payoff Tracker</h2>
+      <p class="section-note">Payoff estimates are based on your average monthly debt reduction rate across all recorded data.</p>
+      <div id="debt-payoff-cards" class="performance-grid"></div>
     </section>
 
     <section class="card">
@@ -69,6 +86,18 @@
         <label>
           Goal net worth ($, optional)
           <input type="number" id="goalAmount" placeholder="e.g. 1000000" step="10000">
+        </label>
+        <label>
+          Inflation rate (% for adj. view)
+          <input type="number" id="inflationRate" value="0" step="0.1" min="0">
+        </label>
+        <label class="checkbox-label">
+          Show scenarios
+          <label class="toggle">
+            <input type="checkbox" id="showScenarios">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-hint">±3% bands</span>
         </label>
       </div>
       <div id="goal-result" class="goal-result"></div>
@@ -102,6 +131,9 @@
         </label>
       </div>
       <div id="retirement-summary" class="performance-grid"></div>
+      <div id="retirement-tax-note" class="tax-note" style="display:none;">
+        ⚠ <strong>Tax note:</strong> Withdrawals from traditional 401k and IRA accounts are taxed as ordinary income. Roth withdrawals are tax-free. These projections do not account for taxes — your actual spendable income in retirement may be lower. Consider consulting a financial advisor for tax-efficient withdrawal strategies.
+      </div>
       <div class="chart-container">
         <canvas id="retirementChart"></canvas>
       </div>

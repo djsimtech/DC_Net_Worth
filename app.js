@@ -156,6 +156,19 @@ function renderSummary(entries) {
   } else {
     changeEl.textContent = "--";
   }
+
+  // Data freshness banner
+  const daysSince = Math.floor((Date.now() - latest.date.getTime()) / (1000 * 60 * 60 * 24));
+  const bannerEl = document.getElementById("freshness-banner");
+  if (daysSince > 35) {
+    bannerEl.textContent = `⚠ Last data entry was ${daysSince} days ago (${latest.dateLabel}). Consider updating your sheet.`;
+    bannerEl.style.display = "block";
+    bannerEl.className = "freshness-banner warning";
+  } else {
+    bannerEl.textContent = `Data is current as of ${latest.dateLabel} (${daysSince} day${daysSince !== 1 ? "s" : ""} ago).`;
+    bannerEl.style.display = "block";
+    bannerEl.className = "freshness-banner fresh";
+  }
 }
 
 function renderNetWorthChart(entries) {
@@ -204,6 +217,54 @@ function renderNetWorthChart(entries) {
   });
 }
 
+// Month-over-month net worth change bar chart
+function renderMoMChart(entries) {
+  if (entries.length < 2) return;
+  const ctx = document.getElementById("momChart");
+  const labels = [];
+  const data = [];
+  const colors = [];
+
+  for (let i = 1; i < entries.length; i++) {
+    const delta = entries[i].netWorth - entries[i - 1].netWorth;
+    labels.push(entries[i].dateLabel);
+    data.push(delta);
+    colors.push(delta >= 0 ? "rgba(74, 222, 128, 0.8)" : "rgba(248, 113, 113, 0.8)");
+  }
+
+  new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "Monthly Change",
+        data,
+        backgroundColor: colors,
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => fmtCurrencySigned(ctx.raw),
+          },
+        },
+      },
+      scales: {
+        x: { ticks: { color: "#94a3b8", maxRotation: 45, minRotation: 45 }, grid: { color: "#334155" } },
+        y: {
+          ticks: { color: "#94a3b8", callback: (v) => fmtCurrencySigned(v) },
+          grid: { color: "#334155" },
+        },
+      },
+    },
+  });
+}
+
 function pctChange(from, to) {
   if (!from) return null;
   return ((to - from) / Math.abs(from)) * 100;
@@ -213,7 +274,6 @@ function monthsBetween(d1, d2) {
   return (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
 }
 
-// Returns the most recent entry that is at least `days` before `latest`, or null.
 function findEntryAtLeastDaysBefore(entries, latest, days) {
   const threshold = new Date(latest.date);
   threshold.setDate(threshold.getDate() - days);
@@ -224,7 +284,6 @@ function findEntryAtLeastDaysBefore(entries, latest, days) {
   return result;
 }
 
-// Returns the last entry dated before Jan 1 of `latest`'s year, or null.
 function findYearStartEntry(entries, latest) {
   const jan1 = new Date(latest.date.getFullYear(), 0, 1);
   let result = null;
@@ -310,7 +369,6 @@ function renderPerformanceCards(entries) {
 }
 
 function buildGroupedDatasets(entries, assetCols, debtCols) {
-  // Collect unique groups in a stable order
   const assetGroupOrder = ["Cash & Other", "Investments", "Real Estate", "Vehicles", "Historical"];
   const debtGroupOrder  = ["Mortgages", "Loans", "Credit Cards", "Other Debts"];
 
@@ -375,7 +433,6 @@ function renderLatestPieChart(entries, assetCols) {
   const ctx = document.getElementById("latestPieChart");
   const latest = entries[entries.length - 1];
 
-  // Aggregate into groups, skip Historical (zero in detailed rows)
   const groups = {};
   assetCols.forEach(({ label }) => {
     const group = guessGroup(label, false);
@@ -404,6 +461,59 @@ function renderLatestPieChart(entries, assetCols) {
       },
     },
   });
+}
+
+// Debt payoff tracker: estimates months until each debt is paid off given a fixed monthly payment equal to current average monthly reduction rate.
+function renderDebtPayoff(entries, debtCols) {
+  if (entries.length < 2 || !debtCols.length) return;
+  const container = document.getElementById("debt-payoff-cards");
+  if (!container) return;
+
+  const latest = entries[entries.length - 1];
+  const totalMonths = monthsBetween(entries[0].date, latest.date) || 1;
+  const cards = [];
+
+  debtCols.forEach(({ label }) => {
+    const group = guessGroup(label, true);
+    if (group === "Other Debts" && /historical/i.test(label)) return;
+
+    const currentBalance = latest.debts[label] || 0;
+    if (currentBalance <= 0) return;
+
+    // Average monthly reduction across all data
+    const first = entries[0].debts[label] || 0;
+    const avgMonthlyReduction = (first - currentBalance) / totalMonths;
+
+    let payoffStr;
+    if (avgMonthlyReduction <= 0) {
+      payoffStr = "Balance is growing";
+    } else {
+      const monthsLeft = Math.ceil(currentBalance / avgMonthlyReduction);
+      const payoffDate = new Date(latest.date);
+      payoffDate.setMonth(payoffDate.getMonth() + monthsLeft);
+      const years = Math.floor(monthsLeft / 12);
+      const months = monthsLeft % 12;
+      const parts = [];
+      if (years) parts.push(`${years}y`);
+      if (months) parts.push(`${months}m`);
+      payoffStr = parts.join(" ") + " · " + payoffDate.toLocaleDateString("en-US", { year: "numeric", month: "short" });
+    }
+
+    cards.push(`
+      <div class="perf-card">
+        <div class="perf-label">${label}</div>
+        <div class="perf-value negative">${fmtCurrency(currentBalance)}</div>
+        <div class="perf-sub">Payoff est: ${payoffStr}</div>
+      </div>
+    `);
+  });
+
+  container.innerHTML = cards.length ? cards.join("") : "<p style='color:var(--text-dim)'>No outstanding debts tracked.</p>";
+}
+
+// Adjusts a future value to today's dollars given inflation rate and years.
+function inflationAdjust(value, annualInflationPct, years) {
+  return value / Math.pow(1 + annualInflationPct / 100, years);
 }
 
 // Returns { labels, historical, projected, goalMonths }
@@ -447,14 +557,25 @@ function renderProjectionChart(entries, goalAmount) {
   const annualRate = parseFloat(document.getElementById("growthRate").value) || 0;
   const monthlyContribution = parseFloat(document.getElementById("monthlyContribution").value) || 0;
   const years = parseInt(document.getElementById("projectionYears").value, 10) || 1;
+  const inflationRate = parseFloat(document.getElementById("inflationRate").value) || 0;
+  const showScenarios = document.getElementById("showScenarios").checked;
 
   const { labels, historical, projected, historicalCount, goalMonths } =
     computeProjection(entries, annualRate, monthlyContribution, years, goalAmount);
 
-  // Build a combined series: historical values, then connect to projected values
+  const inflationAdjustedProjected = inflationRate > 0
+    ? projected.map((v, i) => inflationAdjust(v, inflationRate, (i + 1) / 12))
+    : null;
+
   const combinedProjected = new Array(historicalCount - 1).fill(null)
     .concat([historical[historicalCount - 1]])
     .concat(projected);
+
+  const combinedInflation = inflationAdjustedProjected
+    ? new Array(historicalCount - 1).fill(null)
+      .concat([historical[historicalCount - 1]])
+      .concat(inflationAdjustedProjected)
+    : null;
 
   const datasets = [
     {
@@ -466,7 +587,7 @@ function renderProjectionChart(entries, goalAmount) {
       tension: 0.25,
     },
     {
-      label: "Projected",
+      label: inflationRate > 0 ? `Projected (nominal)` : "Projected",
       data: combinedProjected,
       borderColor: "#fbbf24",
       borderDash: [6, 4],
@@ -474,6 +595,44 @@ function renderProjectionChart(entries, goalAmount) {
       tension: 0.25,
     },
   ];
+
+  if (combinedInflation) {
+    datasets.push({
+      label: `Projected (${inflationRate}% inflation adj.)`,
+      data: combinedInflation,
+      borderColor: "#fb923c",
+      borderDash: [3, 3],
+      fill: false,
+      tension: 0.25,
+    });
+  }
+
+  // Optimistic / conservative scenario bands
+  if (showScenarios) {
+    const { projected: optimistic } = computeProjection(entries, annualRate + 3, monthlyContribution, years, null);
+    const { projected: conservative } = computeProjection(entries, Math.max(annualRate - 3, 0), monthlyContribution, years, null);
+    const pad = new Array(historicalCount - 1).fill(null);
+    const anchor = [historical[historicalCount - 1]];
+
+    datasets.push({
+      label: "Optimistic (+3%)",
+      data: pad.concat(anchor).concat(optimistic),
+      borderColor: "rgba(74, 222, 128, 0.5)",
+      borderDash: [4, 4],
+      fill: false,
+      tension: 0.25,
+      pointRadius: 0,
+    });
+    datasets.push({
+      label: "Conservative (-3%)",
+      data: pad.concat(anchor).concat(conservative),
+      borderColor: "rgba(248, 113, 113, 0.5)",
+      borderDash: [4, 4],
+      fill: false,
+      tension: 0.25,
+      pointRadius: 0,
+    });
+  }
 
   if (goalAmount) {
     datasets.push({
@@ -508,11 +667,11 @@ function renderProjectionChart(entries, goalAmount) {
   const goalResultEl = document.getElementById("goal-result");
   if (goalAmount) {
     if (goalMonths !== null) {
-      const years = Math.floor(goalMonths / 12);
-      const months = goalMonths % 12;
+      const yrs = Math.floor(goalMonths / 12);
+      const mos = goalMonths % 12;
       const parts = [];
-      if (years) parts.push(`${years} year${years !== 1 ? "s" : ""}`);
-      if (months) parts.push(`${months} month${months !== 1 ? "s" : ""}`);
+      if (yrs) parts.push(`${yrs} year${yrs !== 1 ? "s" : ""}`);
+      if (mos) parts.push(`${mos} month${mos !== 1 ? "s" : ""}`);
       const targetDate = new Date(entries[entries.length - 1].date);
       targetDate.setMonth(targetDate.getMonth() + goalMonths);
       goalResultEl.textContent = `At this rate, you'll reach ${fmtCurrency(goalAmount)} in ${parts.join(", ")} ` +
@@ -525,9 +684,6 @@ function renderProjectionChart(entries, goalAmount) {
   }
 }
 
-// Projects a starting balance forward through retirement withdrawals (with
-// optional Social Security income kicking in after a delay) until it's
-// depleted or a max horizon is reached. Returns yearly balance snapshots.
 function computeRetirementDrawdown({ startingBalance, annualGrowthRate, annualWithdrawal, monthlySS, ssDelayYears, maxYears = 50 }) {
   const monthlyRate = Math.pow(1 + annualGrowthRate / 100, 1 / 12) - 1;
   const monthlyWithdrawal = annualWithdrawal / 12;
@@ -569,10 +725,8 @@ function renderRetirementSection(entries, assetCols) {
   const ssDelayYears = parseInt(document.getElementById("ssDelayYears").value, 10) || 0;
   const retirementGrowthRate = parseFloat(document.getElementById("retirementGrowthRate").value) || 0;
 
-  // Start from retirement accounts only (401k, IRA, Roth, stocks), not total net worth
   const investableNow = getInvestableBalance(entries, assetCols);
 
-  // Accumulation phase: project retirement accounts forward to retirement date.
   const { projected } = computeProjection(entries, annualGrowthRate, monthlyContribution, Math.max(yearsToRetirement, 1), null, investableNow);
   const balanceAtRetirement = yearsToRetirement > 0 ? projected[yearsToRetirement * 12 - 1] : investableNow;
 
@@ -584,9 +738,10 @@ function renderRetirementSection(entries, assetCols) {
     ssDelayYears,
   });
 
-  // Summary cards
   const withdrawalRate = balanceAtRetirement > 0 ? (annualWithdrawal / balanceAtRetirement) * 100 : null;
   const annualSS = monthlySS * 12;
+  const safeWithdrawal = balanceAtRetirement * 0.04;
+  const fourPctStatus = annualWithdrawal <= safeWithdrawal;
 
   const cards = [
     {
@@ -606,6 +761,12 @@ function renderRetirementSection(entries, assetCols) {
       value: withdrawalRate !== null ? `${withdrawalRate.toFixed(1)}%` : "--",
       sub: `${fmtCurrency(annualWithdrawal)}/yr from ${fmtCurrency(balanceAtRetirement)}`,
       positive: withdrawalRate === null || withdrawalRate <= 4,
+    },
+    {
+      label: "4% Rule Check",
+      value: fourPctStatus ? "✓ Safe" : "⚠ Over 4%",
+      sub: `Safe amount: ${fmtCurrency(safeWithdrawal)}/yr · Yours: ${fmtCurrency(annualWithdrawal)}/yr`,
+      positive: fourPctStatus,
     },
     {
       label: "Social Security Income",
@@ -639,7 +800,9 @@ function renderRetirementSection(entries, assetCols) {
     </div>
   `).join("");
 
-  // Chart: balance through retirement, year by year
+  // Tax note
+  document.getElementById("retirement-tax-note").style.display = "block";
+
   const labels = yearlyBalances.map((_, i) => `Year ${i}`);
   const ctx = document.getElementById("retirementChart");
   if (retirementChartInstance) retirementChartInstance.destroy();
@@ -683,15 +846,20 @@ function init() {
     return;
   }
 
+  // Print button
+  document.getElementById("print-btn").addEventListener("click", () => window.print());
+
   loadData(config.csvUrl)
     .then(({ entries, assetCols, debtCols }) => {
       if (!entries.length) throw new Error("No valid data rows found.");
 
       renderSummary(entries);
       renderNetWorthChart(entries);
+      renderMoMChart(entries);
       renderPerformanceCards(entries);
       renderBreakdownChart(entries, assetCols, debtCols);
       renderLatestPieChart(entries, assetCols);
+      renderDebtPayoff(entries, debtCols);
 
       const update = () => {
         const goal = parseFloat(document.getElementById("goalAmount").value) || null;
@@ -700,9 +868,11 @@ function init() {
       };
       [
         "growthRate", "monthlyContribution", "projectionYears", "goalAmount",
+        "inflationRate", "showScenarios",
         "yearsToRetirement", "annualWithdrawal", "monthlySS", "ssDelayYears", "retirementGrowthRate",
       ].forEach((id) => {
-        document.getElementById(id).addEventListener("input", update);
+        const el = document.getElementById(id);
+        el.addEventListener(el.type === "checkbox" ? "change" : "input", update);
       });
       update();
 

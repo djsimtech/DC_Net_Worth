@@ -26,6 +26,47 @@ h1, h2 { margin: 0 0 16px; }
   margin: 0 auto 24px;
 }
 
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.header-row h1 { margin: 0; }
+
+.print-btn {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 8px 16px;
+  transition: background 0.15s;
+}
+
+.print-btn:hover { background: #334155; }
+
+.freshness-banner {
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+  padding: 8px 14px;
+}
+
+.freshness-banner.fresh {
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  color: var(--green);
+}
+
+.freshness-banner.warning {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
+}
+
 .summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -75,6 +116,12 @@ main {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 20px;
+}
+
+.section-note {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin: -8px 0 16px;
 }
 
 .chart-container {
@@ -143,7 +190,7 @@ main {
   gap: 6px;
 }
 
-.projection-controls input {
+.projection-controls input[type="number"] {
   background: #0f172a;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -152,10 +199,65 @@ main {
   font-size: 1rem;
 }
 
+.checkbox-label {
+  justify-content: flex-end !important;
+  gap: 8px !important;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle input { opacity: 0; width: 0; height: 0; }
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 24px;
+  transition: background 0.2s;
+}
+
+.toggle-slider::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle input:checked + .toggle-slider { background: var(--accent); }
+.toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+.toggle-hint {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
 .goal-result {
   font-size: 0.95rem;
   color: var(--text-dim);
   margin-bottom: 16px;
+}
+
+.tax-note {
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: 8px;
+  color: #fbbf24;
+  font-size: 0.83rem;
+  line-height: 1.5;
+  margin: 16px 0;
+  padding: 10px 14px;
 }
 
 footer {
@@ -167,7 +269,63 @@ footer {
 }
 
 @media (max-width: 700px) {
+  body { padding: 12px; }
+
+  .header-row { flex-wrap: wrap; gap: 8px; }
+
   .breakdown-layout {
     grid-template-columns: 1fr;
+  }
+
+  .summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .performance-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .projection-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  h1 { font-size: 1.4rem; }
+  h2 { font-size: 1.1rem; }
+
+  .summary-value { font-size: 1.2rem; }
+}
+
+@media (max-width: 420px) {
+  .summary { grid-template-columns: 1fr; }
+  .performance-grid { grid-template-columns: 1fr; }
+  .projection-controls { grid-template-columns: 1fr; }
+}
+
+@media print {
+  body { background: white; color: black; padding: 0; }
+  .print-btn { display: none; }
+  .card {
+    background: white;
+    border: 1px solid #ccc;
+    break-inside: avoid;
+    color: black;
+  }
+  .summary-card {
+    background: #f8f8f8;
+    border: 1px solid #ccc;
+    color: black;
+  }
+  .page-header { margin-bottom: 16px; }
+  .perf-card { background: #f8f8f8; border-color: #ccc; }
+  .freshness-banner { color: #555; background: #f0f0f0; border-color: #ccc; }
+  .tax-note { color: #555; background: #fffbea; border-color: #e0c040; }
+  canvas { max-width: 100%; }
+  footer { color: #555; }
+  :root {
+    --text: black;
+    --text-dim: #555;
+    --border: #ccc;
+    --bg: white;
+    --card-bg: white;
   }
 }
