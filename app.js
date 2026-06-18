@@ -880,8 +880,12 @@ function init() {
         document.body.classList.remove("snapshot");
         nwContainer.style.height  = "";
         pieContainer.style.height = "";
-        if (netWorthChartInstance) netWorthChartInstance.resize();
-        if (pieChartInstance)      pieChartInstance.resize();
+        // Force reflow so containers recalculate their CSS heights before Chart.js reads them
+        void document.body.offsetHeight;
+        requestAnimationFrame(() => {
+          if (netWorthChartInstance) netWorthChartInstance.resize();
+          if (pieChartInstance)      pieChartInstance.resize();
+        });
       }, { once: true });
     }));
   });
