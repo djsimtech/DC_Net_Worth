@@ -107,13 +107,55 @@ server (e.g. `npx serve .`).
    Google Sheet, not in the repo).
 2. In repo Settings > Pages, set the source to your default branch (root).
 
-## Customizing projections
+## Dashboard features
 
-The Projections panel lets you adjust, live in the browser:
+### Summary cards
+Four top-level cards show current net worth, total assets, total debts, and the change since the last entry.
+
+### Data freshness banner
+A green/yellow banner under the title shows how many days ago the data was last updated, so you always know if the numbers are current.
+
+### Net Worth Over Time
+Line chart showing net worth, total assets, and total debts across all recorded months. Below the chart, performance cards show:
+- Last 1 month, 3 months, year-to-date, last 12 months, all-time change
+- Average monthly change
+- Best and worst single-month periods
+
+### Month-over-Month Change
+Bar chart showing the dollar change in net worth each month — green for gains, red for losses.
+
+### Assets vs Debts Breakdown
+Side-by-side bar chart and pie chart breaking down your current assets by category (based on your column names).
+
+### Debt Payoff Tracker
+Cards for each debt showing current balance and an estimated payoff date based on your average monthly reduction rate.
+
+### Projections
+Interactive panel — adjust live in the browser (not saved):
 - **Annual growth rate** — assumed average annual return
-- **Monthly contribution** — how much you add to savings/investments per month
+- **Monthly contribution** — how much you add per month
 - **Projection window** — how many years to project forward
-- **Goal net worth** — optional target; the site estimates when you'll hit it
+- **Goal net worth** — optional target; estimates when you'll reach it
+- **Inflation rate** — toggle to view projections in today's dollars
+- **Show scenarios** — toggle ±3% scenario bands around the base projection
 
-These are calculated client-side and aren't saved — they're just for
-exploring "what if" scenarios.
+### Retirement & Withdrawal Planning
+Interactive retirement calculator:
+- **Years until retirement** and **annual withdrawal** target
+- **Social Security income** and delay years before SS kicks in
+- **Retirement growth rate** — assumed return during retirement
+- Summary cards show: retirement accounts today, projected balance at retirement, safe withdrawal rate, 4% rule check, Social Security income, and estimated fund longevity
+- Includes a tax note reminding you that traditional 401k/IRA withdrawals are taxable
+
+## Exporting
+
+### Export PDF
+Prints the full dashboard (all sections) to PDF via the browser's print dialog.
+
+### Quarterly Snapshot
+Generates a compact one-page PDF summary suitable for saving quarterly records. Includes:
+- Current net worth, assets, debts, and last change
+- Net worth trend chart with key performance metrics
+- Retirement planning summary cards
+
+The snapshot label shows the quarter and date (e.g. "Q2 2026 (6/1/2026)").
