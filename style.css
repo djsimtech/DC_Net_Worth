@@ -123,6 +123,11 @@ main {
   padding: 20px;
 }
 
+/* Passthrough wrapper used only in snapshot print mode */
+.snapshot-charts {
+  display: contents;
+}
+
 .section-note {
   color: var(--text-dim);
   font-size: 0.85rem;
@@ -345,7 +350,12 @@ footer {
     padding: 0;
   }
 
-  /* Hide everything except snapshot-relevant sections */
+  /* Show snapshot-only elements */
+  body.snapshot .snapshot-label { display: block !important; }
+  body.snapshot #pie-card      { display: block !important; }
+  body.snapshot #perf-section  { display: block !important; }
+
+  /* Hide everything not needed for a snapshot */
   body.snapshot .freshness-banner,
   body.snapshot footer,
   body.snapshot #mom-section,
@@ -354,54 +364,51 @@ footer {
   body.snapshot #projection-section,
   body.snapshot #retirement-tax-note,
   body.snapshot #retirementChart,
-  body.snapshot .projection-controls { display: none !important; }
+  body.snapshot .projection-controls,
+  body.snapshot #networth-section .performance-grid { display: none !important; }
 
-  /* Compact header */
-  body.snapshot .page-header { margin-bottom: 8px; }
-  body.snapshot .summary { grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
-  body.snapshot .summary-card { padding: 10px 12px; }
-  body.snapshot .summary-value { font-size: 1.1rem; }
+  /* Compact shared card styles */
+  body.snapshot .card   { padding: 10px 12px; margin-bottom: 8px; break-inside: avoid; }
+  body.snapshot h2      { font-size: 0.9rem; margin-bottom: 6px; }
+  body.snapshot .perf-card  { padding: 7px 9px; }
+  body.snapshot .perf-value { font-size: 0.95rem; }
+  body.snapshot .perf-label { font-size: 0.68rem; }
+  body.snapshot .perf-sub   { font-size: 0.7rem; }
 
-  /* Net worth chart + pie side by side */
-  body.snapshot #networth-section {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 12px;
-    align-items: start;
+  /* Header: summary cards in one row */
+  body.snapshot .page-header  { margin-bottom: 6px; }
+  body.snapshot .summary      { grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; }
+  body.snapshot .summary-card { padding: 8px 10px; }
+  body.snapshot .summary-label{ font-size: 0.72rem; }
+  body.snapshot .summary-value{ font-size: 1rem; }
+  body.snapshot .summary-sub  { font-size: 0.72rem; }
+
+  /* Net worth chart: shorter */
+  body.snapshot #networth-section .chart-container { height: 160px; }
+
+  /* Pie chart: compact */
+  body.snapshot #pie-card .chart-container { height: 170px; }
+
+  /* Two-column row: net worth chart left, pie right */
+  body.snapshot .snapshot-charts {
+    display: grid !important;
+    grid-template-columns: 3fr 2fr;
+    gap: 8px;
+    margin-bottom: 8px;
   }
-  body.snapshot #networth-section h2 { grid-column: 1 / -1; margin-bottom: 4px; }
-  body.snapshot #networth-section .chart-container { height: 180px; }
-  body.snapshot #networth-section .performance-grid { display: none; }
 
-  body.snapshot #pie-card {
-    display: block !important;
-    padding: 12px;
-  }
-  body.snapshot #pie-card .chart-container { height: 180px; }
-
-  /* Performance cards in a tight row */
-  body.snapshot #perf-section {
-    margin-top: 10px;
-  }
+  /* Performance cards: 4 across */
   body.snapshot #perf-section .performance-grid {
     grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-    margin-top: 6px;
+    gap: 5px;
+    margin-top: 5px;
   }
-  body.snapshot .perf-card { padding: 8px 10px; }
-  body.snapshot .perf-value { font-size: 1rem; }
 
-  /* Retirement cards compact */
-  body.snapshot #retirement-section { margin-top: 10px; }
+  /* Retirement cards: 3 across, no chart/controls */
+  body.snapshot #retirement-section .projection-controls { display: none !important; }
   body.snapshot #retirement-summary {
     grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-    margin-top: 6px;
+    gap: 5px;
+    margin-top: 5px;
   }
-
-  /* Snapshot header label */
-  body.snapshot .snapshot-label { display: block !important; }
-
-  body.snapshot .card { padding: 12px; margin-bottom: 10px; }
-  body.snapshot h2 { font-size: 0.95rem; margin-bottom: 6px; }
 }
