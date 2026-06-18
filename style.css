@@ -399,9 +399,12 @@ footer {
   body.snapshot .perf-value { font-size: 0.85rem; }
   body.snapshot .perf-sub { font-size: 0.62rem; }
 
-  /* Breakdown section: pie only, single column — height set by JS */
+  /* Breakdown section: pie only, single column — JS also sets inline height */
   body.snapshot #breakdown-section .breakdown-layout { grid-template-columns: 1fr; }
+  body.snapshot #breakdown-pie-container { height: 130px !important; }
+  body.snapshot #breakdown-section { break-inside: avoid; }
 
-  /* Retirement: cards only, 3 across */
+  /* Retirement: cards only, 3 across — keep whole card together, don't split border */
+  body.snapshot #retirement-section { break-inside: avoid; break-before: auto; }
   body.snapshot #retirement-summary { grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 5px; }
 }
