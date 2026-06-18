@@ -35,6 +35,11 @@ h1, h2 { margin: 0 0 16px; }
 
 .header-row h1 { margin: 0; }
 
+.header-buttons {
+  display: flex;
+  gap: 8px;
+}
+
 .print-btn {
   background: var(--card-bg);
   border: 1px solid var(--border);
@@ -303,7 +308,7 @@ footer {
 
 @media print {
   body { background: white; color: black; padding: 0; }
-  .print-btn { display: none; }
+  .print-btn, .snapshot-btn { display: none; }
   .card {
     background: white;
     border: 1px solid #ccc;
@@ -328,4 +333,72 @@ footer {
     --bg: white;
     --card-bg: white;
   }
+}
+
+/* ── Quarterly Snapshot print mode ── */
+@media print {
+  body.snapshot {
+    font-size: 11px;
+    padding: 0;
+  }
+
+  /* Hide everything except snapshot-relevant sections */
+  body.snapshot .freshness-banner,
+  body.snapshot footer,
+  body.snapshot #mom-section,
+  body.snapshot #breakdown-section,
+  body.snapshot #debt-section,
+  body.snapshot #projection-section,
+  body.snapshot #retirement-tax-note,
+  body.snapshot #retirementChart,
+  body.snapshot .projection-controls { display: none !important; }
+
+  /* Compact header */
+  body.snapshot .page-header { margin-bottom: 8px; }
+  body.snapshot .summary { grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+  body.snapshot .summary-card { padding: 10px 12px; }
+  body.snapshot .summary-value { font-size: 1.1rem; }
+
+  /* Net worth chart + pie side by side */
+  body.snapshot #networth-section {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 12px;
+    align-items: start;
+  }
+  body.snapshot #networth-section h2 { grid-column: 1 / -1; margin-bottom: 4px; }
+  body.snapshot #networth-section .chart-container { height: 180px; }
+  body.snapshot #networth-section .performance-grid { display: none; }
+
+  body.snapshot #pie-card {
+    display: block !important;
+    padding: 12px;
+  }
+  body.snapshot #pie-card .chart-container { height: 180px; }
+
+  /* Performance cards in a tight row */
+  body.snapshot #perf-section {
+    margin-top: 10px;
+  }
+  body.snapshot #perf-section .performance-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-top: 6px;
+  }
+  body.snapshot .perf-card { padding: 8px 10px; }
+  body.snapshot .perf-value { font-size: 1rem; }
+
+  /* Retirement cards compact */
+  body.snapshot #retirement-section { margin-top: 10px; }
+  body.snapshot #retirement-summary {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  /* Snapshot header label */
+  body.snapshot .snapshot-label { display: block !important; }
+
+  body.snapshot .card { padding: 12px; margin-bottom: 10px; }
+  body.snapshot h2 { font-size: 0.95rem; margin-bottom: 6px; }
 }

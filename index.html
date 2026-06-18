@@ -10,7 +10,10 @@
   <header class="page-header">
     <div class="header-row">
       <h1>Our Net Worth</h1>
-      <button id="print-btn" class="print-btn">⬇ Export PDF</button>
+      <div class="header-buttons">
+        <button id="snapshot-btn" class="print-btn snapshot-btn">📄 Quarterly Snapshot</button>
+        <button id="print-btn" class="print-btn">⬇ Export PDF</button>
+      </div>
     </div>
     <div id="freshness-banner" class="freshness-banner" style="display:none;"></div>
     <div id="summary" class="summary">
@@ -35,7 +38,11 @@
   </header>
 
   <main>
-    <section class="card">
+    <div class="snapshot-label" style="display:none;">
+      <strong>Quarterly Snapshot</strong> — as of <span id="snapshot-date"></span>
+    </div>
+
+    <section class="card" id="networth-section">
       <h2>Net Worth Over Time</h2>
       <div class="chart-container">
         <canvas id="netWorthChart"></canvas>
@@ -43,14 +50,28 @@
       <div id="performance-cards" class="performance-grid"></div>
     </section>
 
-    <section class="card">
+    <!-- Snapshot-only: pie chart shown beside net worth chart -->
+    <section class="card" id="pie-card" style="display:none;">
+      <h2>Asset Allocation</h2>
+      <div class="chart-container">
+        <canvas id="latestPieChartSnapshot"></canvas>
+      </div>
+    </section>
+
+    <!-- Snapshot-only: performance cards row -->
+    <section class="card" id="perf-section" style="display:none;">
+      <h2>Performance</h2>
+      <div id="performance-cards-snapshot" class="performance-grid"></div>
+    </section>
+
+    <section class="card" id="mom-section">
       <h2>Month-over-Month Change</h2>
       <div class="chart-container">
         <canvas id="momChart"></canvas>
       </div>
     </section>
 
-    <section class="card">
+    <section class="card" id="breakdown-section">
       <h2>Assets vs Debts Breakdown</h2>
       <div class="breakdown-layout">
         <div class="chart-container">
@@ -62,13 +83,13 @@
       </div>
     </section>
 
-    <section class="card">
+    <section class="card" id="debt-section">
       <h2>Debt Payoff Tracker</h2>
       <p class="section-note">Payoff estimates are based on your average monthly debt reduction rate across all recorded data.</p>
       <div id="debt-payoff-cards" class="performance-grid"></div>
     </section>
 
-    <section class="card">
+    <section class="card" id="projection-section">
       <h2>Projections</h2>
       <div class="projection-controls">
         <label>
@@ -106,7 +127,7 @@
       </div>
     </section>
 
-    <section class="card">
+    <section class="card" id="retirement-section">
       <h2>Retirement &amp; Withdrawal Planning</h2>
       <div class="projection-controls">
         <label>

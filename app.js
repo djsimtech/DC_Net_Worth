@@ -834,6 +834,68 @@ function renderRetirementSection(entries, assetCols) {
   });
 }
 
+// Renders the snapshot-only elements: cloned pie chart, cloned perf cards, date label.
+function renderSnapshotExtras(entries, assetCols) {
+  const latest = entries[entries.length - 1];
+
+  // Date label
+  const quarter = Math.ceil((latest.date.getMonth() + 1) / 3);
+  document.getElementById("snapshot-date").textContent =
+    `Q${quarter} ${latest.date.getFullYear()} (${latest.dateLabel})`;
+
+  // Pie chart clone for snapshot layout
+  const pieCtx = document.getElementById("latestPieChartSnapshot");
+  const groups = {};
+  assetCols.forEach(({ label }) => {
+    const group = guessGroup(label, false);
+    if (group === "Historical") return;
+    groups[group] = (groups[group] || 0) + (latest.assets[label] || 0);
+  });
+  const labels = Object.keys(groups).filter((g) => groups[g] > 0);
+  const data = labels.map((g) => groups[g]);
+  new Chart(pieCtx, {
+    type: "doughnut",
+    data: {
+      labels,
+      datasets: [{ data, backgroundColor: labels.map((g) => GROUP_COLORS[g] || "#64748b") }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom", labels: { color: "#e2e8f0", boxWidth: 10, padding: 6, font: { size: 11 } } },
+        title: { display: false },
+      },
+    },
+  });
+
+  // Performance cards clone (without Best/Worst to keep it tight)
+  const first = entries[0];
+  const cards = [
+    buildChangeCard("Last Month", findEntryAtLeastDaysBefore(entries, latest, 20), latest),
+    buildChangeCard("Last 3 Months", findEntryAtLeastDaysBefore(entries, latest, 75), latest),
+    buildChangeCard("Year to Date", findYearStartEntry(entries, latest) || (first.date.getFullYear() === latest.date.getFullYear() ? first : null), latest),
+    buildChangeCard("Last 12 Months", findEntryAtLeastDaysBefore(entries, latest, 330), latest),
+    buildChangeCard("All Time", first, latest),
+  ];
+  const totalMonths = monthsBetween(first.date, latest.date);
+  if (totalMonths >= 1) {
+    const avg = (latest.netWorth - first.netWorth) / totalMonths;
+    cards.push({ label: "Avg Monthly", value: fmtCurrencySigned(avg), sub: `over ${totalMonths}mo`, positive: avg >= 0 });
+  }
+  const { best, worst } = findBestWorstPeriod(entries);
+  if (best) cards.push({ label: "Best Period", value: fmtCurrencySigned(best.delta), sub: `${best.from.dateLabel} → ${best.to.dateLabel}`, positive: true });
+  if (worst) cards.push({ label: "Worst Period", value: fmtCurrencySigned(worst.delta), sub: `${worst.from.dateLabel} → ${worst.to.dateLabel}`, positive: worst.delta >= 0 });
+
+  document.getElementById("performance-cards-snapshot").innerHTML = cards.filter(Boolean).map((c) => `
+    <div class="perf-card">
+      <div class="perf-label">${c.label}</div>
+      <div class="perf-value ${c.positive ? "positive" : "negative"}">${c.value}</div>
+      <div class="perf-sub">${c.sub}</div>
+    </div>
+  `).join("");
+}
+
 function showError(message) {
   document.getElementById("error-card").style.display = "block";
   document.getElementById("error-message").textContent = message;
@@ -846,8 +908,14 @@ function init() {
     return;
   }
 
-  // Print button
   document.getElementById("print-btn").addEventListener("click", () => window.print());
+
+  document.getElementById("snapshot-btn").addEventListener("click", () => {
+    document.body.classList.add("snapshot");
+    window.print();
+    // classList.remove fires after the print dialog closes
+    window.addEventListener("afterprint", () => document.body.classList.remove("snapshot"), { once: true });
+  });
 
   loadData(config.csvUrl)
     .then(({ entries, assetCols, debtCols }) => {
@@ -860,6 +928,7 @@ function init() {
       renderBreakdownChart(entries, assetCols, debtCols);
       renderLatestPieChart(entries, assetCols);
       renderDebtPayoff(entries, debtCols);
+      renderSnapshotExtras(entries, assetCols);
 
       const update = () => {
         const goal = parseFloat(document.getElementById("goalAmount").value) || null;
