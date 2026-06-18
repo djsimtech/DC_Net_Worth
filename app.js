@@ -407,7 +407,7 @@ function renderLatestPieChart(entries, assetCols) {
 }
 
 // Returns { labels, historical, projected, goalMonths }
-function computeProjection(entries, annualRatePct, monthlyContribution, years, goalAmount) {
+function computeProjection(entries, annualRatePct, monthlyContribution, years, goalAmount, startingBalance) {
   const latest = entries[entries.length - 1];
   const monthlyRate = Math.pow(1 + annualRatePct / 100, 1 / 12) - 1;
   const months = years * 12;
@@ -415,7 +415,7 @@ function computeProjection(entries, annualRatePct, monthlyContribution, years, g
   const labels = entries.map((e) => e.dateLabel);
   const historical = entries.map((e) => e.netWorth);
 
-  let value = latest.netWorth;
+  let value = startingBalance !== undefined ? startingBalance : latest.netWorth;
   const projectedDates = [];
   const projectedValues = [];
   let goalMonths = null;
@@ -553,7 +553,14 @@ function computeRetirementDrawdown({ startingBalance, annualGrowthRate, annualWi
 
 let retirementChartInstance = null;
 
-function renderRetirementSection(entries) {
+function getInvestableBalance(entries, assetCols) {
+  const latest = entries[entries.length - 1];
+  return assetCols
+    .filter((c) => guessGroup(c.label, false) === "Investments")
+    .reduce((sum, c) => sum + (latest.assets[c.label] || 0), 0);
+}
+
+function renderRetirementSection(entries, assetCols) {
   const annualGrowthRate = parseFloat(document.getElementById("growthRate").value) || 0;
   const monthlyContribution = parseFloat(document.getElementById("monthlyContribution").value) || 0;
   const yearsToRetirement = parseInt(document.getElementById("yearsToRetirement").value, 10) || 0;
@@ -562,9 +569,12 @@ function renderRetirementSection(entries) {
   const ssDelayYears = parseInt(document.getElementById("ssDelayYears").value, 10) || 0;
   const retirementGrowthRate = parseFloat(document.getElementById("retirementGrowthRate").value) || 0;
 
-  // Accumulation phase: project current net worth forward to retirement.
-  const { projected, historical } = computeProjection(entries, annualGrowthRate, monthlyContribution, Math.max(yearsToRetirement, 1), null);
-  const balanceAtRetirement = yearsToRetirement > 0 ? projected[yearsToRetirement * 12 - 1] : historical[historical.length - 1];
+  // Start from retirement accounts only (401k, IRA, Roth, stocks), not total net worth
+  const investableNow = getInvestableBalance(entries, assetCols);
+
+  // Accumulation phase: project retirement accounts forward to retirement date.
+  const { projected } = computeProjection(entries, annualGrowthRate, monthlyContribution, Math.max(yearsToRetirement, 1), null, investableNow);
+  const balanceAtRetirement = yearsToRetirement > 0 ? projected[yearsToRetirement * 12 - 1] : investableNow;
 
   const { yearlyBalances, depletedYear } = computeRetirementDrawdown({
     startingBalance: balanceAtRetirement,
@@ -580,7 +590,13 @@ function renderRetirementSection(entries) {
 
   const cards = [
     {
-      label: "Balance at Retirement",
+      label: "Retirement Accounts Today",
+      value: fmtCurrency(investableNow),
+      sub: "401k, IRA, Roth, investments (excl. property & vehicles)",
+      positive: true,
+    },
+    {
+      label: "Projected at Retirement",
       value: fmtCurrency(balanceAtRetirement),
       sub: `in ${yearsToRetirement} year${yearsToRetirement !== 1 ? "s" : ""}`,
       positive: true,
@@ -680,7 +696,7 @@ function init() {
       const update = () => {
         const goal = parseFloat(document.getElementById("goalAmount").value) || null;
         renderProjectionChart(entries, goal);
-        renderRetirementSection(entries);
+        renderRetirementSection(entries, assetCols);
       };
       [
         "growthRate", "monthlyContribution", "projectionYears", "goalAmount",
