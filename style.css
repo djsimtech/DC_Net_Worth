@@ -381,8 +381,10 @@ footer {
   body.snapshot .summary-value { font-size: 0.95rem; }
   body.snapshot .summary-sub { font-size: 0.68rem; }
 
-  /* Net worth chart: clipped to 140px */
-  body.snapshot #networth-section .chart-container { height: 140px; overflow: hidden; }
+  /* Chart heights are set by JS before print — no overflow hacks needed */
+
+  /* Reduce gap between sections */
+  body.snapshot main { gap: 8px; }
 
   /* Performance cards: show them, 4 across */
   body.snapshot #networth-section .performance-grid {
@@ -396,9 +398,8 @@ footer {
   body.snapshot .perf-value { font-size: 0.85rem; }
   body.snapshot .perf-sub { font-size: 0.62rem; }
 
-  /* Breakdown section: pie only, single column */
+  /* Breakdown section: pie only, single column — height set by JS */
   body.snapshot #breakdown-section .breakdown-layout { grid-template-columns: 1fr; }
-  body.snapshot #breakdown-pie-container { height: 150px; overflow: hidden; }
 
   /* Retirement: cards only, 3 across */
   body.snapshot #retirement-summary { grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 5px; }

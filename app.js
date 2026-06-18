@@ -173,7 +173,7 @@ function renderSummary(entries) {
 
 function renderNetWorthChart(entries) {
   const ctx = document.getElementById("netWorthChart");
-  new Chart(ctx, {
+  netWorthChartInstance = new Chart(ctx, {
     type: "line",
     data: {
       labels: entries.map((e) => e.dateLabel),
@@ -443,7 +443,7 @@ function renderLatestPieChart(entries, assetCols) {
   const labels = Object.keys(groups).filter((g) => groups[g] > 0);
   const data   = labels.map((g) => groups[g]);
 
-  new Chart(ctx, {
+  pieChartInstance = new Chart(ctx, {
     type: "doughnut",
     data: {
       labels,
@@ -551,6 +551,8 @@ function computeProjection(entries, annualRatePct, monthlyContribution, years, g
   };
 }
 
+let netWorthChartInstance = null;
+let pieChartInstance = null;
 let projectionChartInstance = null;
 
 function renderProjectionChart(entries, goalAmount) {
@@ -857,10 +859,29 @@ function init() {
   document.getElementById("print-btn").addEventListener("click", () => window.print());
 
   document.getElementById("snapshot-btn").addEventListener("click", () => {
+    const CHART_H = 130;
+    const nwContainer  = document.querySelector("#networth-section .chart-container");
+    const pieContainer = document.getElementById("breakdown-pie-container");
+
+    // Shrink containers and resize Chart.js instances to match
+    nwContainer.style.height  = CHART_H + "px";
+    pieContainer.style.height = CHART_H + "px";
+    if (netWorthChartInstance) netWorthChartInstance.resize(nwContainer.clientWidth, CHART_H);
+    if (pieChartInstance)      pieChartInstance.resize(pieContainer.clientWidth, CHART_H);
+
     document.body.classList.add("snapshot");
-    window.print();
-    // classList.remove fires after the print dialog closes
-    window.addEventListener("afterprint", () => document.body.classList.remove("snapshot"), { once: true });
+
+    // Two rAFs ensure Chart.js finishes re-rendering before the print dialog opens
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      window.print();
+      window.addEventListener("afterprint", () => {
+        document.body.classList.remove("snapshot");
+        nwContainer.style.height  = "";
+        pieContainer.style.height = "";
+        if (netWorthChartInstance) netWorthChartInstance.resize();
+        if (pieChartInstance)      pieChartInstance.resize();
+      }, { once: true });
+    }));
   });
 
   loadData(config.csvUrl)
