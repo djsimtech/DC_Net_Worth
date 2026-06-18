@@ -859,7 +859,7 @@ function init() {
   document.getElementById("print-btn").addEventListener("click", () => window.print());
 
   document.getElementById("snapshot-btn").addEventListener("click", () => {
-    const CHART_H = 130;
+    const CHART_H = 100;
     const nwContainer  = document.querySelector("#networth-section .chart-container");
     const pieContainer = document.getElementById("breakdown-pie-container");
 

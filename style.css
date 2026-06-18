@@ -387,13 +387,14 @@ footer {
   /* Reduce gap between sections */
   body.snapshot main { gap: 8px; }
 
-  /* Performance cards: show them, 4 across */
+  /* Performance cards: show first row only (4 cards) */
   body.snapshot #networth-section .performance-grid {
     display: grid !important;
     grid-template-columns: repeat(4, 1fr);
     gap: 4px;
     margin-top: 5px;
   }
+  body.snapshot #performance-cards .perf-card:nth-child(n+5) { display: none !important; }
   body.snapshot .perf-card { padding: 5px 7px; }
   body.snapshot .perf-label { font-size: 0.62rem; }
   body.snapshot .perf-value { font-size: 0.85rem; }
@@ -401,7 +402,7 @@ footer {
 
   /* Breakdown section: pie only, single column — JS also sets inline height */
   body.snapshot #breakdown-section .breakdown-layout { grid-template-columns: 1fr; }
-  body.snapshot #breakdown-pie-container { height: 130px !important; }
+  body.snapshot #breakdown-pie-container { height: 100px !important; }
   body.snapshot #breakdown-section { break-inside: avoid; }
 
   /* Retirement: cards only, 3 across — keep whole card together, don't split border */
