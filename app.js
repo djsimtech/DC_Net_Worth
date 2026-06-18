@@ -1,7 +1,29 @@
-const CATEGORY_COLORS = [
-  "#38bdf8", "#4ade80", "#fbbf24", "#a78bfa", "#f472b6",
-  "#fb923c", "#34d399", "#60a5fa", "#f87171", "#c084fc"
-];
+const GROUP_COLORS = {
+  "Cash & Other":  "#a78bfa",
+  "Investments":   "#38bdf8",
+  "Real Estate":   "#4ade80",
+  "Vehicles":      "#fbbf24",
+  "Historical":    "#64748b",
+  "Mortgages":     "#f87171",
+  "Loans":         "#fb923c",
+  "Credit Cards":  "#f472b6",
+  "Other Debts":   "#94a3b8",
+};
+
+function guessGroup(label, isDebt) {
+  const l = label.toLowerCase();
+  if (isDebt) {
+    if (/mortgage/.test(l)) return "Mortgages";
+    if (/loan/.test(l)) return "Loans";
+    if (/credit.?card/.test(l)) return "Credit Cards";
+    return "Other Debts";
+  }
+  if (/historical/.test(l)) return "Historical";
+  if (/\(property\)|real.?estate|\bproperty\b/.test(l)) return "Real Estate";
+  if (/\(vehicle\)|\bvehicle\b|f-?250|f-?150|f-?350|mustang|\btruck\b|\bsuv\b/.test(l)) return "Vehicles";
+  if (/\b401k\b|\bira\b|\broth\b|\bstock\b|invest|brokerage|\bfund\b|\betf\b|equity|pension/.test(l)) return "Investments";
+  return "Cash & Other";
+}
 
 const fmtCurrency = (n) =>
   "$" + Math.round(n).toLocaleString("en-US");
@@ -287,40 +309,56 @@ function renderPerformanceCards(entries) {
   `).join("");
 }
 
+function buildGroupedDatasets(entries, assetCols, debtCols) {
+  // Collect unique groups in a stable order
+  const assetGroupOrder = ["Cash & Other", "Investments", "Real Estate", "Vehicles", "Historical"];
+  const debtGroupOrder  = ["Mortgages", "Loans", "Credit Cards", "Other Debts"];
+
+  const usedAssetGroups = assetGroupOrder.filter((g) =>
+    assetCols.some((c) => guessGroup(c.label, false) === g)
+  );
+  const usedDebtGroups = debtGroupOrder.filter((g) =>
+    debtCols.some((c) => guessGroup(c.label, true) === g)
+  );
+
+  const datasets = [];
+
+  usedAssetGroups.forEach((group) => {
+    const cols = assetCols.filter((c) => guessGroup(c.label, false) === group);
+    datasets.push({
+      label: group,
+      data: entries.map((e) => cols.reduce((sum, c) => sum + (e.assets[c.label] || 0), 0)),
+      backgroundColor: GROUP_COLORS[group],
+      stack: "stack0",
+    });
+  });
+
+  usedDebtGroups.forEach((group) => {
+    const cols = debtCols.filter((c) => guessGroup(c.label, true) === group);
+    datasets.push({
+      label: group + " (debt)",
+      data: entries.map((e) => -cols.reduce((sum, c) => sum + (e.debts[c.label] || 0), 0)),
+      backgroundColor: GROUP_COLORS[group],
+      stack: "stack0",
+    });
+  });
+
+  return datasets;
+}
+
 function renderBreakdownChart(entries, assetCols, debtCols) {
   const ctx = document.getElementById("breakdownChart");
-  const datasets = [];
-  let colorIdx = 0;
-
-  assetCols.forEach(({ label }) => {
-    datasets.push({
-      label,
-      data: entries.map((e) => e.assets[label]),
-      backgroundColor: CATEGORY_COLORS[colorIdx % CATEGORY_COLORS.length],
-      stack: "stack0",
-    });
-    colorIdx++;
-  });
-  debtCols.forEach(({ label }) => {
-    datasets.push({
-      label: label + " (debt)",
-      data: entries.map((e) => -e.debts[label]),
-      backgroundColor: CATEGORY_COLORS[colorIdx % CATEGORY_COLORS.length],
-      stack: "stack0",
-    });
-    colorIdx++;
-  });
+  const datasets = buildGroupedDatasets(entries, assetCols, debtCols);
 
   new Chart(ctx, {
     type: "bar",
-    data: {
-      labels: entries.map((e) => e.dateLabel),
-      datasets,
-    },
+    data: { labels: entries.map((e) => e.dateLabel), datasets },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: "#e2e8f0" } } },
+      plugins: {
+        legend: { labels: { color: "#e2e8f0", boxWidth: 12, padding: 10 } },
+      },
       scales: {
         x: { stacked: true, ticks: { color: "#94a3b8" }, grid: { color: "#334155" } },
         y: {
@@ -336,23 +374,32 @@ function renderBreakdownChart(entries, assetCols, debtCols) {
 function renderLatestPieChart(entries, assetCols) {
   const ctx = document.getElementById("latestPieChart");
   const latest = entries[entries.length - 1];
-  const labels = assetCols.map((c) => c.label);
-  const data = assetCols.map((c) => latest.assets[c.label]);
+
+  // Aggregate into groups, skip Historical (zero in detailed rows)
+  const groups = {};
+  assetCols.forEach(({ label }) => {
+    const group = guessGroup(label, false);
+    if (group === "Historical") return;
+    groups[group] = (groups[group] || 0) + (latest.assets[label] || 0);
+  });
+
+  const labels = Object.keys(groups).filter((g) => groups[g] > 0);
+  const data   = labels.map((g) => groups[g]);
 
   new Chart(ctx, {
     type: "doughnut",
     data: {
       labels,
-      datasets: [{
-        data,
-        backgroundColor: labels.map((_, i) => CATEGORY_COLORS[i % CATEGORY_COLORS.length]),
-      }],
+      datasets: [{ data, backgroundColor: labels.map((g) => GROUP_COLORS[g] || "#64748b") }],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { position: "bottom", labels: { color: "#e2e8f0" } },
+        legend: {
+          position: "bottom",
+          labels: { color: "#e2e8f0", boxWidth: 12, padding: 10, font: { size: 12 } },
+        },
         title: { display: true, text: "Latest Asset Allocation", color: "#e2e8f0" },
       },
     },
