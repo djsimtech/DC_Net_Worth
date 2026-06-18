@@ -347,71 +347,59 @@ footer {
 }
 
 /* ── Quarterly Snapshot print mode ── */
+@page { size: letter portrait; margin: 0.35in; }
+
 @media print {
   body.snapshot {
     font-size: 11px;
     padding: 0;
   }
 
-  /* Show snapshot-only elements */
-  body.snapshot .snapshot-label { display: block !important; }
-  body.snapshot #pie-card      { display: block !important; }
-  body.snapshot #perf-section  { display: block !important; }
+  /* Show snapshot label */
+  body.snapshot .snapshot-label { display: block !important; margin-bottom: 6px; font-size: 0.8rem; color: #555; }
 
-  /* Hide everything not needed for a snapshot */
+  /* Hide non-snapshot content */
   body.snapshot .freshness-banner,
   body.snapshot footer,
   body.snapshot #mom-section,
-  body.snapshot #breakdown-section,
   body.snapshot #debt-section,
   body.snapshot #projection-section,
   body.snapshot #retirement-tax-note,
   body.snapshot #retirementChart,
   body.snapshot .projection-controls,
-  body.snapshot #networth-section .performance-grid { display: none !important; }
+  body.snapshot #breakdown-bar-container { display: none !important; }
 
-  /* Compact shared card styles */
-  body.snapshot .card   { padding: 10px 12px; margin-bottom: 8px; break-inside: avoid; }
-  body.snapshot h2      { font-size: 0.9rem; margin-bottom: 6px; }
-  body.snapshot .perf-card  { padding: 7px 9px; }
-  body.snapshot .perf-value { font-size: 0.95rem; }
-  body.snapshot .perf-label { font-size: 0.68rem; }
-  body.snapshot .perf-sub   { font-size: 0.7rem; }
+  /* Compact cards */
+  body.snapshot .card { padding: 8px 12px; margin-bottom: 6px; break-inside: avoid; }
+  body.snapshot h2 { font-size: 0.85rem; margin-bottom: 5px; }
 
-  /* Header: summary cards in one row */
-  body.snapshot .page-header  { margin-bottom: 6px; }
-  body.snapshot .summary      { grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; }
-  body.snapshot .summary-card { padding: 8px 10px; }
-  body.snapshot .summary-label{ font-size: 0.72rem; }
-  body.snapshot .summary-value{ font-size: 1rem; }
-  body.snapshot .summary-sub  { font-size: 0.72rem; }
+  /* Summary: one row of 4 */
+  body.snapshot .page-header { margin-bottom: 6px; }
+  body.snapshot .summary { grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 4px; }
+  body.snapshot .summary-card { padding: 6px 10px; }
+  body.snapshot .summary-label { font-size: 0.68rem; }
+  body.snapshot .summary-value { font-size: 0.95rem; }
+  body.snapshot .summary-sub { font-size: 0.68rem; }
 
-  /* Net worth chart: shorter */
-  body.snapshot #networth-section .chart-container { height: 160px; }
+  /* Net worth chart: clipped to 140px */
+  body.snapshot #networth-section .chart-container { height: 140px; overflow: hidden; }
 
-  /* Pie chart: compact */
-  body.snapshot #pie-card .chart-container { height: 170px; }
-
-  /* Two-column row: net worth chart left, pie right */
-  body.snapshot .snapshot-charts {
+  /* Performance cards: show them, 4 across */
+  body.snapshot #networth-section .performance-grid {
     display: grid !important;
-    grid-template-columns: 3fr 2fr;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-
-  /* Performance cards: 4 across */
-  body.snapshot #perf-section .performance-grid {
     grid-template-columns: repeat(4, 1fr);
-    gap: 5px;
+    gap: 4px;
     margin-top: 5px;
   }
+  body.snapshot .perf-card { padding: 5px 7px; }
+  body.snapshot .perf-label { font-size: 0.62rem; }
+  body.snapshot .perf-value { font-size: 0.85rem; }
+  body.snapshot .perf-sub { font-size: 0.62rem; }
 
-  /* Retirement cards: 3 across, no chart/controls */
-  body.snapshot #retirement-section .projection-controls { display: none !important; }
-  body.snapshot #retirement-summary {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 5px;
-    margin-top: 5px;
-  }
+  /* Breakdown section: pie only, single column */
+  body.snapshot #breakdown-section .breakdown-layout { grid-template-columns: 1fr; }
+  body.snapshot #breakdown-pie-container { height: 150px; overflow: hidden; }
+
+  /* Retirement: cards only, 3 across */
+  body.snapshot #retirement-summary { grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 5px; }
 }

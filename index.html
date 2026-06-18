@@ -42,28 +42,12 @@
       <strong>Quarterly Snapshot</strong> — as of <span id="snapshot-date"></span>
     </div>
 
-    <div class="snapshot-charts">
-      <section class="card" id="networth-section">
-        <h2>Net Worth Over Time</h2>
-        <div class="chart-container">
-          <canvas id="netWorthChart"></canvas>
-        </div>
-        <div id="performance-cards" class="performance-grid"></div>
-      </section>
-
-      <!-- Snapshot-only: pie chart shown beside net worth chart -->
-      <section class="card" id="pie-card" style="display:none;">
-        <h2>Asset Allocation</h2>
-        <div class="chart-container">
-          <canvas id="latestPieChartSnapshot"></canvas>
-        </div>
-      </section>
-    </div>
-
-    <!-- Snapshot-only: performance cards row -->
-    <section class="card" id="perf-section" style="display:none;">
-      <h2>Performance</h2>
-      <div id="performance-cards-snapshot" class="performance-grid"></div>
+    <section class="card" id="networth-section">
+      <h2>Net Worth Over Time</h2>
+      <div class="chart-container">
+        <canvas id="netWorthChart"></canvas>
+      </div>
+      <div id="performance-cards" class="performance-grid"></div>
     </section>
 
     <section class="card" id="mom-section">
@@ -76,10 +60,10 @@
     <section class="card" id="breakdown-section">
       <h2>Assets vs Debts Breakdown</h2>
       <div class="breakdown-layout">
-        <div class="chart-container">
+        <div class="chart-container" id="breakdown-bar-container">
           <canvas id="breakdownChart"></canvas>
         </div>
-        <div class="chart-container">
+        <div class="chart-container" id="breakdown-pie-container">
           <canvas id="latestPieChart"></canvas>
         </div>
       </div>
