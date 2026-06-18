@@ -859,33 +859,25 @@ function init() {
   document.getElementById("print-btn").addEventListener("click", () => window.print());
 
   document.getElementById("snapshot-btn").addEventListener("click", () => {
-    const CHART_H = 100;
-    const nwContainer  = document.querySelector("#networth-section .chart-container");
-    const pieContainer = document.getElementById("breakdown-pie-container");
+    const CHART_H = 180;
+    const nwContainer = document.querySelector("#networth-section .chart-container");
+    const nwOrigH = nwContainer.style.height;
 
-    // Apply snapshot class FIRST so CSS layout changes (breakdown grid → 1 col)
-    // happen before we measure clientWidth for the resize call.
     document.body.classList.add("snapshot");
-    void document.body.offsetHeight; // force reflow so layout recalculates
+    void document.body.offsetHeight;
 
-    nwContainer.style.height  = CHART_H + "px";
-    pieContainer.style.height = CHART_H + "px";
+    nwContainer.style.height = CHART_H + "px";
     if (netWorthChartInstance) netWorthChartInstance.resize(nwContainer.clientWidth, CHART_H);
-    if (pieChartInstance)      pieChartInstance.resize(pieContainer.clientWidth, CHART_H);
 
-    // Two rAFs ensure Chart.js finishes re-rendering before the print dialog opens
     requestAnimationFrame(() => requestAnimationFrame(() => {
       window.print();
       window.addEventListener("afterprint", () => {
         document.body.classList.remove("snapshot");
-        nwContainer.style.height  = "";
-        pieContainer.style.height = "";
-        // Force reflow so containers recalculate their CSS heights before Chart.js reads them
-        void document.body.offsetHeight;
-        requestAnimationFrame(() => {
+        nwContainer.style.height = nwOrigH;
+        // Delay resize until browser has repainted with restored CSS heights
+        setTimeout(() => {
           if (netWorthChartInstance) netWorthChartInstance.resize();
-          if (pieChartInstance)      pieChartInstance.resize();
-        });
+        }, 100);
       }, { once: true });
     }));
   });
