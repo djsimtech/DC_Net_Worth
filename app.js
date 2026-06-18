@@ -863,13 +863,15 @@ function init() {
     const nwContainer  = document.querySelector("#networth-section .chart-container");
     const pieContainer = document.getElementById("breakdown-pie-container");
 
-    // Shrink containers and resize Chart.js instances to match
+    // Apply snapshot class FIRST so CSS layout changes (breakdown grid → 1 col)
+    // happen before we measure clientWidth for the resize call.
+    document.body.classList.add("snapshot");
+    void document.body.offsetHeight; // force reflow so layout recalculates
+
     nwContainer.style.height  = CHART_H + "px";
     pieContainer.style.height = CHART_H + "px";
     if (netWorthChartInstance) netWorthChartInstance.resize(nwContainer.clientWidth, CHART_H);
     if (pieChartInstance)      pieChartInstance.resize(pieContainer.clientWidth, CHART_H);
-
-    document.body.classList.add("snapshot");
 
     // Two rAFs ensure Chart.js finishes re-rendering before the print dialog opens
     requestAnimationFrame(() => requestAnimationFrame(() => {

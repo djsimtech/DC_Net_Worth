@@ -369,8 +369,9 @@ footer {
   body.snapshot .projection-controls,
   body.snapshot #breakdown-bar-container { display: none !important; }
 
-  /* Compact cards */
-  body.snapshot .card { padding: 8px 12px; margin-bottom: 6px; break-inside: avoid; }
+  /* Compact cards — allow page breaks between sections so retirement isn't
+     bumped to page 2 just because it can't fit in leftover space */
+  body.snapshot .card { padding: 8px 12px; margin-bottom: 6px; break-inside: auto; }
   body.snapshot h2 { font-size: 0.85rem; margin-bottom: 5px; }
 
   /* Summary: one row of 4 */
