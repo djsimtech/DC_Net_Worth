@@ -368,13 +368,13 @@ function renderPerformanceCards(entries) {
     cards.push({ label: "Debt-to-Asset Ratio", value: pct, sub: trend, positive: ratio <= 0.2 });
   }
 
-  if (totalMonths >= 1 && first.totalDebts > latest.totalDebts) {
+  if (totalMonths >= 1 && first.totalDebts > 0) {
     const avgPaydown = (first.totalDebts - latest.totalDebts) / totalMonths;
     cards.push({
       label: "Avg. Debt Paydown",
       value: fmtCurrencySigned(-avgPaydown),
       sub: `per month over ${totalMonths} month${totalMonths !== 1 ? "s" : ""}`,
-      positive: true,
+      positive: avgPaydown >= 0,
     });
   }
 
