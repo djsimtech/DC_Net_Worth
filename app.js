@@ -523,9 +523,13 @@ function renderDebtPayoff(entries, debtCols) {
     const currentBalance = latest.debts[label] || 0;
     if (currentBalance <= 0) return;
 
-    // Average monthly reduction across all data
-    const first = entries[0].debts[label] || 0;
-    const avgMonthlyReduction = (first - currentBalance) / totalMonths;
+    // Use the first entry where this debt had a non-zero balance, so debts
+    // added partway through don't appear to be "growing" from a phantom $0 start
+    const firstWithDebt = entries.find((e) => (e.debts[label] || 0) > 0);
+    if (!firstWithDebt) return;
+    const firstBalance = firstWithDebt.debts[label];
+    const monthsSinceFirst = monthsBetween(firstWithDebt.date, latest.date) || 1;
+    const avgMonthlyReduction = (firstBalance - currentBalance) / monthsSinceFirst;
 
     let payoffStr;
     if (avgMonthlyReduction <= 0) {
