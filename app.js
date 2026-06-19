@@ -359,6 +359,15 @@ function renderPerformanceCards(entries) {
     });
   }
 
+  if (latest.totalAssets > 0) {
+    const ratio = latest.totalDebts / latest.totalAssets;
+    const pct = (ratio * 100).toFixed(1) + "%";
+    const prev = entries.length > 1 ? entries[entries.length - 2] : null;
+    const prevRatio = prev && prev.totalAssets > 0 ? prev.totalDebts / prev.totalAssets : null;
+    const trend = prevRatio !== null ? (ratio < prevRatio ? "↓ vs last entry" : ratio > prevRatio ? "↑ vs last entry" : "unchanged") : "";
+    cards.push({ label: "Debt-to-Asset Ratio", value: pct, sub: trend, positive: ratio <= 0.2 });
+  }
+
   container.innerHTML = cards.filter(Boolean).map((c) => `
     <div class="perf-card">
       <div class="perf-label">${c.label}</div>
