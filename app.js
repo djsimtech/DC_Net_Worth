@@ -368,6 +368,42 @@ function renderPerformanceCards(entries) {
     cards.push({ label: "Debt-to-Asset Ratio", value: pct, sub: trend, positive: ratio <= 0.2 });
   }
 
+  if (totalMonths >= 1 && first.totalDebts > latest.totalDebts) {
+    const avgPaydown = (first.totalDebts - latest.totalDebts) / totalMonths;
+    cards.push({
+      label: "Avg. Debt Paydown",
+      value: fmtCurrencySigned(-avgPaydown),
+      sub: `per month over ${totalMonths} month${totalMonths !== 1 ? "s" : ""}`,
+      positive: true,
+    });
+  }
+
+  if (totalMonths >= 1 && first.totalAssets > 0 && latest.totalAssets > first.totalAssets) {
+    const annualizedGrowth = (Math.pow(latest.totalAssets / first.totalAssets, 12 / totalMonths) - 1) * 100;
+    cards.push({
+      label: "Asset Growth Rate",
+      value: "+" + annualizedGrowth.toFixed(1) + "%",
+      sub: "annualized since first entry",
+      positive: true,
+    });
+  }
+
+  const avgMonthly = totalMonths >= 1 ? (latest.netWorth - first.netWorth) / totalMonths : 0;
+  if (avgMonthly > 0) {
+    const milestones = [100e3, 250e3, 500e3, 750e3, 1e6, 1.25e6, 1.5e6, 1.75e6, 2e6, 2.5e6, 3e6, 4e6, 5e6];
+    const next = milestones.find((m) => m > latest.netWorth);
+    if (next) {
+      const monthsAway = Math.ceil((next - latest.netWorth) / avgMonthly);
+      const label = next >= 1e6 ? `$${(next / 1e6).toFixed(next % 1e6 === 0 ? 0 : 2)}M` : `$${(next / 1e3).toFixed(0)}K`;
+      cards.push({
+        label: "Next Milestone",
+        value: label,
+        sub: `~${monthsAway} month${monthsAway !== 1 ? "s" : ""} away`,
+        positive: true,
+      });
+    }
+  }
+
   container.innerHTML = cards.filter(Boolean).map((c) => `
     <div class="perf-card">
       <div class="perf-label">${c.label}</div>
