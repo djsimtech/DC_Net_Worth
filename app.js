@@ -171,8 +171,19 @@ function renderSummary(entries) {
   }
 }
 
+function filterEntriesByRange(entries, range) {
+  if (range === "all") return entries;
+  const latest = entries[entries.length - 1];
+  const cutoff = new Date(latest.date);
+  if (range === "6m") cutoff.setMonth(cutoff.getMonth() - 6);
+  else if (range === "1y") cutoff.setFullYear(cutoff.getFullYear() - 1);
+  else if (range === "2y") cutoff.setFullYear(cutoff.getFullYear() - 2);
+  return entries.filter((e) => e.date >= cutoff);
+}
+
 function renderNetWorthChart(entries) {
   const ctx = document.getElementById("netWorthChart");
+  if (netWorthChartInstance) { netWorthChartInstance.destroy(); netWorthChartInstance = null; }
   netWorthChartInstance = new Chart(ctx, {
     type: "line",
     data: {
@@ -506,6 +517,167 @@ function renderLatestPieChart(entries, assetCols) {
   });
 }
 
+function renderCategoryTrendChart(entries, assetCols) {
+  const ctx = document.getElementById("categoryTrendChart");
+  if (!ctx) return;
+  if (categoryTrendChartInstance) { categoryTrendChartInstance.destroy(); categoryTrendChartInstance = null; }
+
+  const groups = ["Investments", "Real Estate", "Cash & Other", "Vehicles"];
+  const usedGroups = groups.filter((g) => assetCols.some((c) => guessGroup(c.label, false) === g));
+
+  const datasets = usedGroups.map((group) => {
+    const cols = assetCols.filter((c) => guessGroup(c.label, false) === group);
+    return {
+      label: group,
+      data: entries.map((e) => cols.reduce((sum, c) => sum + (e.assets[c.label] || 0), 0)),
+      borderColor: GROUP_COLORS[group],
+      fill: false,
+      tension: 0.25,
+      pointRadius: 2,
+    };
+  });
+
+  categoryTrendChartInstance = new Chart(ctx, {
+    type: "line",
+    data: { labels: entries.map((e) => e.dateLabel), datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: "#e2e8f0" } } },
+      scales: {
+        x: { ticks: { color: "#94a3b8", maxRotation: 45, minRotation: 45 }, grid: { color: "#334155" } },
+        y: {
+          ticks: { color: "#94a3b8", callback: (v) => fmtCurrency(v) },
+          grid: { color: "#334155" },
+        },
+      },
+    },
+  });
+}
+
+function renderAnnualSummary(entries) {
+  const container = document.getElementById("annual-summary-table");
+  if (!container) return;
+
+  const years = [...new Set(entries.map((e) => e.date.getFullYear()))].sort();
+  const yearData = years.map((year) => {
+    const yearEntries = entries.filter((e) => e.date.getFullYear() === year);
+    return { year, entry: yearEntries[yearEntries.length - 1] };
+  });
+
+  const rows = yearData.map((d, i) => {
+    const prev = i > 0 ? yearData[i - 1].entry : null;
+    const change = prev ? d.entry.netWorth - prev.netWorth : null;
+    const pct = prev && prev.netWorth !== 0 ? (change / Math.abs(prev.netWorth)) * 100 : null;
+    return { year: d.year, netWorth: d.entry.netWorth, change, pct };
+  }).reverse();
+
+  container.innerHTML = `
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Year</th>
+          <th class="td-right">Year-End Net Worth</th>
+          <th class="td-right">Annual Change</th>
+          <th class="td-right">Change %</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map((r) => `
+          <tr>
+            <td>${r.year}</td>
+            <td class="td-right">${fmtCurrency(r.netWorth)}</td>
+            <td class="td-right ${r.change === null ? "" : r.change >= 0 ? "positive" : "negative"}">
+              ${r.change === null ? "—" : fmtCurrencySigned(r.change)}
+            </td>
+            <td class="td-right ${r.pct === null ? "" : r.pct >= 0 ? "positive" : "negative"}">
+              ${r.pct === null ? "—" : (r.pct >= 0 ? "+" : "") + r.pct.toFixed(1) + "%"}
+            </td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderAccountsTable(entries, assetCols, debtCols) {
+  const container = document.getElementById("accounts-table-container");
+  if (!container) return;
+
+  const latest = entries[entries.length - 1];
+  const totalAssets = latest.totalAssets;
+
+  const allRows = [
+    ...assetCols
+      .filter(({ label }) => guessGroup(label, false) !== "Historical")
+      .map(({ label }) => ({
+        name: label,
+        category: guessGroup(label, false),
+        balance: latest.assets[label] || 0,
+        isDebt: false,
+      })),
+    ...debtCols
+      .filter(({ label }) => !/historical/i.test(label))
+      .map(({ label }) => ({
+        name: label,
+        category: guessGroup(label, true),
+        balance: latest.debts[label] || 0,
+        isDebt: true,
+      })),
+  ].filter((r) => r.balance > 0);
+
+  function sortRows(rows) {
+    return [...rows].sort((a, b) => {
+      if (accountsSortCol === "name") return accountsSortDir * a.name.localeCompare(b.name);
+      if (accountsSortCol === "category") return accountsSortDir * a.category.localeCompare(b.category);
+      return accountsSortDir * (a.balance - b.balance);
+    });
+  }
+
+  function render() {
+    const sorted = sortRows(allRows);
+    const thClass = (col) => col === accountsSortCol ? (accountsSortDir === -1 ? "sort-desc" : "sort-asc") : "";
+
+    container.innerHTML = `
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="${thClass("name")}" data-col="name">Account</th>
+            <th class="${thClass("category")}" data-col="category">Category</th>
+            <th class="td-right ${thClass("balance")}" data-col="balance">Balance</th>
+            <th class="td-right ${thClass("pct")}" data-col="pct">% of Assets</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sorted.map((r) => `
+            <tr>
+              <td>${r.name}</td>
+              <td><span class="category-dot" style="background:${GROUP_COLORS[r.category] || "#64748b"}"></span>${r.category}${r.isDebt ? " (debt)" : ""}</td>
+              <td class="td-right ${r.isDebt ? "negative" : "positive"}">${r.isDebt ? "−" : ""}${fmtCurrency(r.balance)}</td>
+              <td class="td-right td-dim">${r.isDebt ? "—" : (r.balance / totalAssets * 100).toFixed(1) + "%"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+
+    container.querySelectorAll("th[data-col]").forEach((th) => {
+      th.addEventListener("click", () => {
+        const col = th.dataset.col;
+        if (accountsSortCol === col) {
+          accountsSortDir *= -1;
+        } else {
+          accountsSortCol = col;
+          accountsSortDir = col === "name" || col === "category" ? 1 : -1;
+        }
+        render();
+      });
+    });
+  }
+
+  render();
+}
+
 // Debt payoff tracker: estimates months until each debt is paid off given a fixed monthly payment equal to current average monthly reduction rate.
 function renderDebtPayoff(entries, debtCols) {
   if (entries.length < 2 || !debtCols.length) return;
@@ -601,6 +773,9 @@ function computeProjection(entries, annualRatePct, monthlyContribution, years, g
 let netWorthChartInstance = null;
 let pieChartInstance = null;
 let projectionChartInstance = null;
+let categoryTrendChartInstance = null;
+let accountsSortCol = "balance";
+let accountsSortDir = -1;
 
 function renderProjectionChart(entries, goalAmount) {
   const annualRate = parseFloat(document.getElementById("growthRate").value) || 0;
@@ -825,6 +1000,26 @@ function renderRetirementSection(entries, assetCols) {
     },
   ];
 
+  if (annualWithdrawal > 0) {
+    const fireNumber = annualWithdrawal * 25;
+    const fireProgress = Math.min((investableNow / fireNumber) * 100, 100);
+    const { goalMonths: fireMonths } = computeProjection(entries, annualGrowthRate, monthlyContribution, 50, fireNumber, investableNow);
+    let fireSub;
+    if (investableNow >= fireNumber) {
+      fireSub = "Already reached!";
+    } else if (fireMonths !== null) {
+      fireSub = `${fireProgress.toFixed(0)}% there · ~${Math.ceil(fireMonths / 12)}yr away`;
+    } else {
+      fireSub = `${fireProgress.toFixed(0)}% there · ${fmtCurrency(fireNumber - investableNow)} gap`;
+    }
+    cards.push({
+      label: "FIRE Number (25×)",
+      value: fmtCurrency(fireNumber),
+      sub: fireSub,
+      positive: investableNow >= fireNumber,
+    });
+  }
+
   if (depletedYear !== null) {
     cards.push({
       label: "Funds Last",
@@ -928,11 +1123,22 @@ function init() {
       renderSummary(entries);
       renderNetWorthChart(entries);
       renderMoMChart(entries);
+      renderAnnualSummary(entries);
+      renderCategoryTrendChart(entries, assetCols);
       renderPerformanceCards(entries);
       renderBreakdownChart(entries, assetCols, debtCols);
       renderLatestPieChart(entries, assetCols);
+      renderAccountsTable(entries, assetCols, debtCols);
       renderDebtPayoff(entries, debtCols);
       renderSnapshotExtras(entries);
+
+      document.querySelectorAll(".range-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".range-btn").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          renderNetWorthChart(filterEntriesByRange(entries, btn.dataset.range));
+        });
+      });
 
       const update = () => {
         const goal = parseFloat(document.getElementById("goalAmount").value) || null;
