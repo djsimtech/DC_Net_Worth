@@ -91,10 +91,11 @@ function loadData(csvUrl) {
       const dateIdx = headers.findIndex((h) => h.toLowerCase() === "date");
       if (dateIdx === -1) throw new Error('No "Date" column found in sheet.');
 
+      const noteIdx = headers.findIndex((h) => /^notes?$/i.test(h.trim()) || /^note:/i.test(h.trim()));
       const assetCols = [];
       const debtCols = [];
       headers.forEach((h, idx) => {
-        if (idx === dateIdx) return;
+        if (idx === dateIdx || idx === noteIdx) return;
         const lower = h.toLowerCase();
         if (lower.startsWith("asset")) assetCols.push({ idx, label: h.replace(/^asset:?\s*/i, "") });
         else if (lower.startsWith("debt") || lower.startsWith("liabilit")) debtCols.push({ idx, label: h.replace(/^(debt|liabilit\w*):?\s*/i, "") });
@@ -130,6 +131,7 @@ function loadData(csvUrl) {
           totalAssets,
           totalDebts,
           netWorth: totalAssets - totalDebts,
+          note: noteIdx >= 0 ? (row[noteIdx] || "").trim() : "",
         };
       }).filter((e) => !isNaN(e.date.getTime()));
 
@@ -139,7 +141,7 @@ function loadData(csvUrl) {
     });
 }
 
-function renderSummary(entries) {
+function renderSummary(entries, assetCols) {
   const latest = entries[entries.length - 1];
   const prev = entries.length > 1 ? entries[entries.length - 2] : null;
 
@@ -155,6 +157,19 @@ function renderSummary(entries) {
     changeEl.classList.add(change >= 0 ? "positive" : "negative");
   } else {
     changeEl.textContent = "--";
+  }
+
+  // Liquid net worth (cash + investments − all debts)
+  if (assetCols) {
+    const liquidAssets = assetCols
+      .filter(({ label }) => ["Cash & Other", "Investments"].includes(guessGroup(label, false)))
+      .reduce((sum, { label }) => sum + (latest.assets[label] || 0), 0);
+    const liquidNW = liquidAssets - latest.totalDebts;
+    const liquidEl = document.getElementById("liquid-net-worth");
+    if (liquidEl) {
+      liquidEl.textContent = fmtCurrency(liquidNW);
+      liquidEl.className = "summary-value " + (liquidNW >= 0 ? "positive" : "negative");
+    }
   }
 
   // Data freshness banner
@@ -181,9 +196,39 @@ function filterEntriesByRange(entries, range) {
   return entries.filter((e) => e.date >= cutoff);
 }
 
+function makeNotePlugin(entries) {
+  const annotated = entries.filter((e) => e.note);
+  if (!annotated.length) return { id: "noop" };
+  return {
+    id: "noteLines",
+    afterDraw(chart) {
+      const { ctx, chartArea: a, scales: { x } } = chart;
+      annotated.forEach(({ dateLabel, note }) => {
+        const px = x.getPixelForValue(dateLabel);
+        if (!px || px < a.left || px > a.right) return;
+        ctx.save();
+        ctx.strokeStyle = "rgba(251,191,36,0.6)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(px, a.top);
+        ctx.lineTo(px, a.bottom);
+        ctx.stroke();
+        ctx.fillStyle = "#fbbf24";
+        ctx.font = "600 10px -apple-system,sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(note.length > 16 ? note.slice(0, 15) + "…" : note, px, a.top + 11);
+        ctx.restore();
+      });
+    },
+  };
+}
+
 function renderNetWorthChart(entries) {
   const ctx = document.getElementById("netWorthChart");
   if (netWorthChartInstance) { netWorthChartInstance.destroy(); netWorthChartInstance = null; }
+  const t = getTheme();
+  const hasNotes = entries.some((e) => e.note);
   netWorthChartInstance = new Chart(ctx, {
     type: "line",
     data: {
@@ -193,9 +238,11 @@ function renderNetWorthChart(entries) {
           label: "Net Worth",
           data: entries.map((e) => e.netWorth),
           borderColor: "#38bdf8",
-          backgroundColor: "rgba(56, 189, 248, 0.15)",
+          backgroundColor: "rgba(56,189,248,0.15)",
           fill: true,
           tension: 0.25,
+          pointRadius: entries.map((e) => e.note ? 6 : 3),
+          pointBackgroundColor: entries.map((e) => e.note ? "#fbbf24" : "#38bdf8"),
         },
         {
           label: "Total Assets",
@@ -203,6 +250,7 @@ function renderNetWorthChart(entries) {
           borderColor: "#4ade80",
           fill: false,
           tension: 0.25,
+          pointRadius: 2,
         },
         {
           label: "Total Debts",
@@ -210,21 +258,33 @@ function renderNetWorthChart(entries) {
           borderColor: "#f87171",
           fill: false,
           tension: 0.25,
+          pointRadius: 2,
         },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: "#e2e8f0" } } },
+      plugins: {
+        legend: { labels: { color: t.text } },
+        tooltip: {
+          callbacks: {
+            footer: (items) => {
+              const note = entries[items[0]?.dataIndex]?.note;
+              return note ? ["📌 " + note] : [];
+            },
+          },
+        },
+      },
       scales: {
-        x: { ticks: { color: "#94a3b8" }, grid: { color: "#334155" } },
+        x: { ticks: { color: t.textDim }, grid: { color: t.grid } },
         y: {
-          ticks: { color: "#94a3b8", callback: (v) => fmtCurrency(v) },
-          grid: { color: "#334155" },
+          ticks: { color: t.textDim, callback: (v) => fmtCurrency(v) },
+          grid: { color: t.grid },
         },
       },
     },
+    plugins: hasNotes ? [makeNotePlugin(entries)] : [],
   });
 }
 
@@ -232,6 +292,8 @@ function renderNetWorthChart(entries) {
 function renderMoMChart(entries) {
   if (entries.length < 2) return;
   const ctx = document.getElementById("momChart");
+  const existing = Chart.getChart(ctx);
+  if (existing) existing.destroy();
   const labels = [];
   const data = [];
   const colors = [];
@@ -243,6 +305,7 @@ function renderMoMChart(entries) {
     colors.push(delta >= 0 ? "rgba(74, 222, 128, 0.8)" : "rgba(248, 113, 113, 0.8)");
   }
 
+  const t = getTheme();
   new Chart(ctx, {
     type: "bar",
     data: {
@@ -266,10 +329,10 @@ function renderMoMChart(entries) {
         },
       },
       scales: {
-        x: { ticks: { color: "#94a3b8", maxRotation: 45, minRotation: 45 }, grid: { color: "#334155" } },
+        x: { ticks: { color: t.textDim, maxRotation: 45, minRotation: 45 }, grid: { color: t.grid } },
         y: {
-          ticks: { color: "#94a3b8", callback: (v) => fmtCurrencySigned(v) },
-          grid: { color: "#334155" },
+          ticks: { color: t.textDim, callback: (v) => fmtCurrencySigned(v) },
+          grid: { color: t.grid },
         },
       },
     },
@@ -460,7 +523,10 @@ function buildGroupedDatasets(entries, assetCols, debtCols) {
 
 function renderBreakdownChart(entries, assetCols, debtCols) {
   const ctx = document.getElementById("breakdownChart");
+  const existing = Chart.getChart(ctx);
+  if (existing) existing.destroy();
   const datasets = buildGroupedDatasets(entries, assetCols, debtCols);
+  const t = getTheme();
 
   new Chart(ctx, {
     type: "bar",
@@ -469,14 +535,14 @@ function renderBreakdownChart(entries, assetCols, debtCols) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: "#e2e8f0", boxWidth: 12, padding: 10 } },
+        legend: { labels: { color: t.text, boxWidth: 12, padding: 10 } },
       },
       scales: {
-        x: { stacked: true, ticks: { color: "#94a3b8" }, grid: { color: "#334155" } },
+        x: { stacked: true, ticks: { color: t.textDim }, grid: { color: t.grid } },
         y: {
           stacked: true,
-          ticks: { color: "#94a3b8", callback: (v) => fmtCurrency(v) },
-          grid: { color: "#334155" },
+          ticks: { color: t.textDim, callback: (v) => fmtCurrency(v) },
+          grid: { color: t.grid },
         },
       },
     },
@@ -485,6 +551,7 @@ function renderBreakdownChart(entries, assetCols, debtCols) {
 
 function renderLatestPieChart(entries, assetCols) {
   const ctx = document.getElementById("latestPieChart");
+  if (pieChartInstance) { pieChartInstance.destroy(); pieChartInstance = null; }
   const latest = entries[entries.length - 1];
 
   const groups = {};
@@ -497,6 +564,7 @@ function renderLatestPieChart(entries, assetCols) {
   const labels = Object.keys(groups).filter((g) => groups[g] > 0);
   const data   = labels.map((g) => groups[g]);
 
+  const t = getTheme();
   pieChartInstance = new Chart(ctx, {
     type: "doughnut",
     data: {
@@ -509,12 +577,150 @@ function renderLatestPieChart(entries, assetCols) {
       plugins: {
         legend: {
           position: "bottom",
-          labels: { color: "#e2e8f0", boxWidth: 12, padding: 10, font: { size: 12 } },
+          labels: { color: t.text, boxWidth: 12, padding: 10, font: { size: 12 } },
         },
-        title: { display: true, text: "Latest Asset Allocation", color: "#e2e8f0" },
+        title: { display: true, text: "Latest Asset Allocation", color: t.text },
       },
     },
   });
+}
+
+function renderRollingReturnChart(entries) {
+  const ctx = document.getElementById("rollingReturnChart");
+  if (!ctx) return;
+  if (rollingReturnChartInstance) { rollingReturnChartInstance.destroy(); rollingReturnChartInstance = null; }
+
+  const labels = [];
+  const data = [];
+  const colors = [];
+
+  for (const entry of entries) {
+    const prior = findEntryAtLeastDaysBefore(entries, entry, 330);
+    if (!prior) continue;
+    const change = pctChange(prior.netWorth, entry.netWorth);
+    if (change === null) continue;
+    labels.push(entry.dateLabel);
+    data.push(parseFloat(change.toFixed(1)));
+    colors.push(change >= 0 ? "rgba(74,222,128,0.8)" : "rgba(248,113,113,0.8)");
+  }
+
+  const section = document.getElementById("rolling-return-section");
+  if (data.length < 2) {
+    if (section) section.style.display = "none";
+    return;
+  }
+  if (section) section.style.display = "";
+
+  const t = getTheme();
+  rollingReturnChartInstance = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{ label: "Trailing 12-Month Return", data, backgroundColor: colors, borderRadius: 4 }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (c) => (c.raw >= 0 ? "+" : "") + c.raw.toFixed(1) + "%" } },
+      },
+      scales: {
+        x: { ticks: { color: t.textDim, maxRotation: 45, minRotation: 45 }, grid: { color: t.grid } },
+        y: {
+          ticks: { color: t.textDim, callback: (v) => (v >= 0 ? "+" : "") + v.toFixed(0) + "%" },
+          grid: { color: t.grid },
+        },
+      },
+    },
+  });
+}
+
+function renderDebtRatioChart(entries) {
+  const ctx = document.getElementById("debtRatioChart");
+  if (!ctx) return;
+  if (debtRatioChartInstance) { debtRatioChartInstance.destroy(); debtRatioChartInstance = null; }
+
+  const t = getTheme();
+  const ratios = entries.map((e) => e.totalAssets > 0 ? parseFloat(((e.totalDebts / e.totalAssets) * 100).toFixed(1)) : 0);
+
+  debtRatioChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: entries.map((e) => e.dateLabel),
+      datasets: [{
+        label: "Debt-to-Asset Ratio (%)",
+        data: ratios,
+        borderColor: "#f87171",
+        backgroundColor: "rgba(248,113,113,0.1)",
+        fill: true,
+        tension: 0.25,
+        pointRadius: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (c) => c.raw.toFixed(1) + "%" } },
+      },
+      scales: {
+        x: { ticks: { color: t.textDim, maxRotation: 45, minRotation: 45 }, grid: { color: t.grid } },
+        y: {
+          min: 0,
+          ticks: { color: t.textDim, callback: (v) => v.toFixed(0) + "%" },
+          grid: { color: t.grid },
+        },
+      },
+    },
+  });
+}
+
+function renderEmergencyFund(entries, assetCols) {
+  const container = document.getElementById("emergency-summary");
+  if (!container) return;
+
+  const latest = entries[entries.length - 1];
+  const liquidAssets = assetCols
+    .filter(({ label }) => ["Cash & Other", "Investments"].includes(guessGroup(label, false)))
+    .reduce((sum, { label }) => sum + (latest.assets[label] || 0), 0);
+
+  const monthlyExpenses = parseFloat(document.getElementById("monthlyExpenses")?.value) || 0;
+
+  const cards = [];
+  cards.push({
+    label: "Liquid Assets",
+    value: fmtCurrency(liquidAssets),
+    sub: "cash + investment accounts",
+    positive: true,
+  });
+
+  if (monthlyExpenses > 0) {
+    const months = liquidAssets / monthlyExpenses;
+    const status = months >= 6 ? "✓ Strong (6+ months)" : months >= 3 ? "⚠ Adequate (3–6 months)" : "✗ Under 3 months";
+    cards.push({ label: "Months Covered", value: months.toFixed(1) + " mo", sub: status, positive: months >= 6 });
+    cards.push({
+      label: "3-Month Target",
+      value: fmtCurrency(monthlyExpenses * 3),
+      sub: liquidAssets >= monthlyExpenses * 3 ? "✓ Met" : fmtCurrency(monthlyExpenses * 3 - liquidAssets) + " short",
+      positive: liquidAssets >= monthlyExpenses * 3,
+    });
+    cards.push({
+      label: "6-Month Target",
+      value: fmtCurrency(monthlyExpenses * 6),
+      sub: liquidAssets >= monthlyExpenses * 6 ? "✓ Met" : fmtCurrency(monthlyExpenses * 6 - liquidAssets) + " short",
+      positive: liquidAssets >= monthlyExpenses * 6,
+    });
+  }
+
+  container.innerHTML = cards.map((c) => `
+    <div class="perf-card">
+      <div class="perf-label">${c.label}</div>
+      <div class="perf-value ${c.positive ? "positive" : "negative"}">${c.value}</div>
+      <div class="perf-sub">${c.sub}</div>
+    </div>
+  `).join("");
 }
 
 function renderCategoryTrendChart(entries, assetCols) {
@@ -537,18 +743,19 @@ function renderCategoryTrendChart(entries, assetCols) {
     };
   });
 
+  const t = getTheme();
   categoryTrendChartInstance = new Chart(ctx, {
     type: "line",
     data: { labels: entries.map((e) => e.dateLabel), datasets },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: "#e2e8f0" } } },
+      plugins: { legend: { labels: { color: t.text } } },
       scales: {
-        x: { ticks: { color: "#94a3b8", maxRotation: 45, minRotation: 45 }, grid: { color: "#334155" } },
+        x: { ticks: { color: t.textDim, maxRotation: 45, minRotation: 45 }, grid: { color: t.grid } },
         y: {
-          ticks: { color: "#94a3b8", callback: (v) => fmtCurrency(v) },
-          grid: { color: "#334155" },
+          ticks: { color: t.textDim, callback: (v) => fmtCurrency(v) },
+          grid: { color: t.grid },
         },
       },
     },
@@ -774,8 +981,19 @@ let netWorthChartInstance = null;
 let pieChartInstance = null;
 let projectionChartInstance = null;
 let categoryTrendChartInstance = null;
+let rollingReturnChartInstance = null;
+let debtRatioChartInstance = null;
 let accountsSortCol = "balance";
 let accountsSortDir = -1;
+
+function getTheme() {
+  const light = document.body.classList.contains("light-mode");
+  return {
+    text:    light ? "#0f172a" : "#e2e8f0",
+    textDim: light ? "#475569" : "#94a3b8",
+    grid:    light ? "#e2e8f0" : "#334155",
+  };
+}
 
 function renderProjectionChart(entries, goalAmount) {
   const annualRate = parseFloat(document.getElementById("growthRate").value) || 0;
@@ -871,18 +1089,19 @@ function renderProjectionChart(entries, goalAmount) {
 
   const ctx = document.getElementById("projectionChart");
   if (projectionChartInstance) projectionChartInstance.destroy();
+  const tp = getTheme();
   projectionChartInstance = new Chart(ctx, {
     type: "line",
     data: { labels, datasets },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: "#e2e8f0" } } },
+      plugins: { legend: { labels: { color: tp.text } } },
       scales: {
-        x: { ticks: { color: "#94a3b8", maxRotation: 45, minRotation: 45 }, grid: { color: "#334155" } },
+        x: { ticks: { color: tp.textDim, maxRotation: 45, minRotation: 45 }, grid: { color: tp.grid } },
         y: {
-          ticks: { color: "#94a3b8", callback: (v) => fmtCurrency(v) },
-          grid: { color: "#334155" },
+          ticks: { color: tp.textDim, callback: (v) => fmtCurrency(v) },
+          grid: { color: tp.grid },
         },
       },
     },
@@ -1050,6 +1269,7 @@ function renderRetirementSection(entries, assetCols) {
   const labels = yearlyBalances.map((_, i) => `Year ${i}`);
   const ctx = document.getElementById("retirementChart");
   if (retirementChartInstance) retirementChartInstance.destroy();
+  const tr = getTheme();
   retirementChartInstance = new Chart(ctx, {
     type: "line",
     data: {
@@ -1066,12 +1286,12 @@ function renderRetirementSection(entries, assetCols) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: "#e2e8f0" } } },
+      plugins: { legend: { labels: { color: tr.text } } },
       scales: {
-        x: { title: { display: true, text: "Years into retirement", color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "#334155" } },
+        x: { title: { display: true, text: "Years into retirement", color: tr.textDim }, ticks: { color: tr.textDim }, grid: { color: tr.grid } },
         y: {
-          ticks: { color: "#94a3b8", callback: (v) => fmtCurrency(v) },
-          grid: { color: "#334155" },
+          ticks: { color: tr.textDim, callback: (v) => fmtCurrency(v) },
+          grid: { color: tr.grid },
         },
       },
     },
@@ -1086,6 +1306,20 @@ function renderSnapshotExtras(entries) {
     `Q${quarter} ${latest.date.getFullYear()} (${latest.dateLabel})`;
 }
 
+function rerenderAllCharts(entries, assetCols, debtCols) {
+  const activeRange = document.querySelector(".range-btn.active")?.dataset.range || "all";
+  renderNetWorthChart(filterEntriesByRange(entries, activeRange));
+  renderMoMChart(entries);
+  renderCategoryTrendChart(entries, assetCols);
+  renderBreakdownChart(entries, assetCols, debtCols);
+  renderLatestPieChart(entries, assetCols);
+  renderRollingReturnChart(entries);
+  renderDebtRatioChart(entries);
+  const goal = parseFloat(document.getElementById("goalAmount").value) || null;
+  renderProjectionChart(entries, goal);
+  renderRetirementSection(entries, assetCols);
+}
+
 function showError(message) {
   document.getElementById("error-card").style.display = "block";
   document.getElementById("error-message").textContent = message;
@@ -1096,6 +1330,12 @@ function init() {
   if (!config || !config.csvUrl || config.csvUrl.includes("YOUR_PUBLISHED_ID")) {
     showError("Missing or unconfigured config.js. Copy config.example.js to config.js and add your Google Sheet's published CSV URL.");
     return;
+  }
+
+  // Apply saved theme before first render so charts use correct colors
+  if (localStorage.getItem("theme") === "light") {
+    document.body.classList.add("light-mode");
+    document.getElementById("theme-toggle").textContent = "🌙 Dark";
   }
 
   document.getElementById("print-btn").addEventListener("click", () => window.print());
@@ -1120,16 +1360,38 @@ function init() {
     .then(({ entries, assetCols, debtCols }) => {
       if (!entries.length) throw new Error("No valid data rows found.");
 
-      renderSummary(entries);
+      renderSummary(entries, assetCols);
       renderNetWorthChart(entries);
       renderMoMChart(entries);
       renderAnnualSummary(entries);
       renderCategoryTrendChart(entries, assetCols);
+      renderRollingReturnChart(entries);
+      renderDebtRatioChart(entries);
       renderPerformanceCards(entries);
       renderBreakdownChart(entries, assetCols, debtCols);
       renderLatestPieChart(entries, assetCols);
       renderDebtPayoff(entries, debtCols);
+      renderEmergencyFund(entries, assetCols);
       renderSnapshotExtras(entries);
+
+      // Restore saved monthly expenses
+      const savedExpenses = localStorage.getItem("monthlyExpenses");
+      if (savedExpenses) {
+        document.getElementById("monthlyExpenses").value = savedExpenses;
+        renderEmergencyFund(entries, assetCols);
+      }
+      document.getElementById("monthlyExpenses").addEventListener("input", (e) => {
+        localStorage.setItem("monthlyExpenses", e.target.value);
+        renderEmergencyFund(entries, assetCols);
+      });
+
+      // Theme toggle
+      document.getElementById("theme-toggle").addEventListener("click", () => {
+        const isLight = document.body.classList.toggle("light-mode");
+        document.getElementById("theme-toggle").textContent = isLight ? "🌙 Dark" : "☀ Light";
+        localStorage.setItem("theme", isLight ? "light" : "dark");
+        rerenderAllCharts(entries, assetCols, debtCols);
+      });
 
       document.querySelectorAll(".range-btn").forEach((btn) => {
         btn.addEventListener("click", () => {

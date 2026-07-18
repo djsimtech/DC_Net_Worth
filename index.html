@@ -11,6 +11,7 @@
     <div class="header-row">
       <h1>Our Net Worth</h1>
       <div class="header-buttons">
+        <button id="theme-toggle" class="print-btn" title="Toggle light/dark mode">☀ Light</button>
         <button id="snapshot-btn" class="print-btn snapshot-btn">📄 Quarterly Snapshot</button>
         <button id="print-btn" class="print-btn">⬇ Export PDF</button>
       </div>
@@ -33,6 +34,11 @@
       <div class="summary-card">
         <div class="summary-label">Change (last entry)</div>
         <div class="summary-value" id="last-change">--</div>
+      </div>
+      <div class="summary-card" id="liquid-nw-card">
+        <div class="summary-label">Liquid Net Worth</div>
+        <div class="summary-value" id="liquid-net-worth">--</div>
+        <div class="summary-sub">cash + investments − debts</div>
       </div>
     </div>
   </header>
@@ -78,6 +84,22 @@
       </div>
     </section>
 
+    <section class="card" id="rolling-return-section">
+      <h2>Trailing 12-Month Return</h2>
+      <p class="section-note">Year-over-year net worth growth rate at each recorded month.</p>
+      <div class="chart-container">
+        <canvas id="rollingReturnChart"></canvas>
+      </div>
+    </section>
+
+    <section class="card" id="debt-ratio-section">
+      <h2>Debt-to-Asset Ratio Over Time</h2>
+      <p class="section-note">Lower is better — tracks your leverage trend across all recorded months.</p>
+      <div class="chart-container">
+        <canvas id="debtRatioChart"></canvas>
+      </div>
+    </section>
+
     <section class="card" id="breakdown-section">
       <h2>Assets vs Debts Breakdown</h2>
       <div class="breakdown-layout">
@@ -94,6 +116,18 @@
       <h2>Debt Payoff Tracker</h2>
       <p class="section-note">Payoff estimates are based on your average monthly debt reduction rate across all recorded data.</p>
       <div id="debt-payoff-cards" class="performance-grid"></div>
+    </section>
+
+    <section class="card" id="emergency-section">
+      <h2>Emergency Fund Coverage</h2>
+      <p class="section-note">Liquid assets = cash + investment accounts. Enter monthly expenses to see how many months you're covered.</p>
+      <div class="projection-controls" style="max-width:320px; margin-bottom:12px;">
+        <label>
+          Monthly expenses ($)
+          <input type="number" id="monthlyExpenses" placeholder="e.g. 5000" step="100" min="0">
+        </label>
+      </div>
+      <div id="emergency-summary" class="performance-grid"></div>
     </section>
 
     <section class="card" id="projection-section">

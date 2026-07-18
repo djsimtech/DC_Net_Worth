@@ -379,6 +379,47 @@ footer {
   .projection-controls { grid-template-columns: 1fr; }
 }
 
+/* ── Light mode ── */
+body.light-mode {
+  --bg: #f1f5f9;
+  --card-bg: #ffffff;
+  --text: #0f172a;
+  --text-dim: #475569;
+  --accent: #0284c7;
+  --green: #15803d;
+  --red: #b91c1c;
+  --border: #e2e8f0;
+}
+
+body.light-mode .print-btn:hover { background: #e2e8f0; }
+
+body.light-mode .freshness-banner.fresh {
+  background: rgba(21, 128, 61, 0.08);
+  border-color: rgba(21, 128, 61, 0.25);
+  color: #15803d;
+}
+
+body.light-mode .freshness-banner.warning {
+  background: rgba(180, 83, 9, 0.08);
+  border-color: rgba(180, 83, 9, 0.25);
+  color: #92400e;
+}
+
+body.light-mode .tax-note {
+  background: rgba(180, 83, 9, 0.06);
+  border-color: rgba(180, 83, 9, 0.2);
+  color: #92400e;
+}
+
+body.light-mode .projection-controls input[type="number"] {
+  background: #f8fafc;
+}
+
+body.light-mode .data-table td {
+  border-bottom-color: #e2e8f0;
+}
+
+/* ── Print / Export ── */
 @media print {
   body { background: white; color: black; padding: 0; }
   .print-btn, .snapshot-btn { display: none; }
@@ -427,6 +468,10 @@ footer {
   body.snapshot #annual-summary-section,
   body.snapshot #category-trend-section,
   body.snapshot #accounts-section,
+  body.snapshot #liquid-nw-card,
+  body.snapshot #rolling-return-section,
+  body.snapshot #debt-ratio-section,
+  body.snapshot #emergency-section,
   body.snapshot #debt-section,
   body.snapshot #projection-section,
   body.snapshot #retirement-tax-note,
