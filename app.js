@@ -1128,7 +1128,6 @@ function init() {
       renderPerformanceCards(entries);
       renderBreakdownChart(entries, assetCols, debtCols);
       renderLatestPieChart(entries, assetCols);
-      renderAccountsTable(entries, assetCols, debtCols);
       renderDebtPayoff(entries, debtCols);
       renderSnapshotExtras(entries);
 
