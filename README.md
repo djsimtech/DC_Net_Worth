@@ -36,6 +36,7 @@ Rules:
 - Any column starting with `Asset` (e.g. `Asset: Checking`) is treated as an asset.
 - Any column starting with `Debt` or `Liabilit...` (e.g. `Debt: Mortgage`) is
   treated as a debt.
+- An optional **Note** column (named `Note` or `Notes`) can hold a short text label for any row. Notes appear as gold markers with a dashed vertical line on the Net Worth chart, and show in the tooltip when you hover that month.
 - If the same account name applies to both a value and a loan/debt (e.g. a
   car worth $40k with a $6.6k loan against it), give each column a distinct
   label, like `Asset: RDX (Vehicle)` and `Debt: RDX Loan`.
@@ -110,22 +111,38 @@ server (e.g. `npx serve .`).
 ## Dashboard features
 
 ### Summary cards
-Four top-level cards show current net worth, total assets, total debts, and the change since the last entry.
+Five top-level cards show current net worth, total assets, total debts, last-entry change, and **Liquid Net Worth** (cash + investment accounts minus all debts — excludes real estate and vehicles).
 
 ### Data freshness banner
 A green/yellow banner under the title shows how many days ago the data was last updated, so you always know if the numbers are current.
 
 ### Net Worth Over Time
-Line chart showing net worth, total assets, and total debts across all recorded months. Below the chart, performance cards show:
+Line chart showing net worth, total assets, and total debts across all recorded months. Use the **6M / 1Y / 2Y / All** buttons to filter the date range. Data points with a **Note** in the sheet are highlighted in gold with a dashed annotation line. Below the chart, performance cards show:
 - Last 1 month, 3 months, year-to-date, last 12 months, all-time change
 - Average monthly change
 - Best and worst single-month periods
+- Debt-to-asset ratio, average debt paydown, asset growth rate, next net worth milestone
 
 ### Month-over-Month Change
 Bar chart showing the dollar change in net worth each month — green for gains, red for losses.
 
+### Year-by-Year Summary
+Table showing year-end net worth with annual change amount and percentage for each calendar year.
+
+### Asset Category Trends
+Line chart tracking each asset category (Investments, Real Estate, Cash & Other, Vehicles) over time.
+
+### Trailing 12-Month Return
+Bar chart plotting the year-over-year net worth growth rate at each recorded month. Requires at least ~13 months of data to display.
+
+### Debt-to-Asset Ratio Over Time
+Line chart showing how your leverage (total debts ÷ total assets) has changed over all recorded months. Lower is better.
+
 ### Assets vs Debts Breakdown
 Side-by-side bar chart and pie chart breaking down your current assets by category (based on your column names).
+
+### Emergency Fund Coverage
+Enter your monthly expenses to see how many months of living costs your liquid assets cover. Shows 3-month and 6-month targets with a met/short indicator. Monthly expenses value is saved across sessions.
 
 ### Debt Payoff Tracker
 Cards for each debt showing current balance and an estimated payoff date based on your average monthly reduction rate.
@@ -146,6 +163,12 @@ Interactive retirement calculator:
 - **Retirement growth rate** — assumed return during retirement
 - Summary cards show: retirement accounts today, projected balance at retirement, safe withdrawal rate, 4% rule check, Social Security income, and estimated fund longevity
 - Includes a tax note reminding you that traditional 401k/IRA withdrawals are taxable
+
+### Retirement & FIRE
+The retirement section includes a **FIRE Number (25×)** card that calculates your financial independence target (25× annual withdrawal) and shows progress toward it.
+
+### Dark/Light mode
+The **☀ Light / 🌙 Dark** toggle in the header switches between dark (default) and light themes. Your preference is saved across sessions.
 
 ## Exporting
 
