@@ -318,6 +318,7 @@ main {
   white-space: nowrap;
 }
 .data-table th:hover { color: var(--text); }
+.data-table th.td-right { text-align: right; }
 .data-table th.sort-asc::after { content: " ↑"; }
 .data-table th.sort-desc::after { content: " ↓"; }
 .data-table td {
